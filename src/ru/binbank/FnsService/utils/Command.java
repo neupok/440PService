@@ -35,7 +35,6 @@ public class Command {
 
     /**
      * Считваем название конфига  -config configName
-     *
      */
     public String getConfigOpt() {
         return line.getOptionValue(CONFIG_OPT, DEFAULT_CONFIG_XML);
