@@ -28,13 +28,13 @@ public class Command {
         try {
             line = parser.parse(options, args);
         } catch (ParseException e) {
-            // todo: добавить логирование как в AdapterCommand.java
+            // @todo: добавить логирование как в AdapterCommand.java
             e.printStackTrace();
         }
     }
 
     /**
-     * Считваем название конфига  -config configName
+     * Возвращает название конфига  -config configName
      */
     public String getConfigOpt() {
         return line.getOptionValue(CONFIG_OPT, DEFAULT_CONFIG_XML);

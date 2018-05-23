@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<440PService>
+    <!-- Настрок-->
+    <process>
+        <!-- Максимальное количество обрабатываемых за один раз запросов -->
+        <batch_size>100</batch_size>
+    </process>
+
+<!-- Дальше только для примера -->
+
+        <!-- Настройки в режиме dev (включаются установкой атрибута adapter/@env="dev")-->
+    <dev>
+        <port>1236</port>
+        <!-- время в минутах для повторного подключения -->
+        <reconnect>15</reconnect>
+        <!-- время в минутах для записи статуса в лог -->
+        <status>30</status>
+        <!-- конфигурационный файл log4j -->
+        <log4j>log4j_prod.properties</log4j>
+        <!-- настройки подключения к тестовой БД -->
+        <ignoreDbCancelReadException>true</ignoreDbCancelReadException>
+        <database name="CFT_BIN">
+            <!--Используются драйвера ojdbc6.jar и orai18n.jar -->
+            <driver>oracle.jdbc.driver.OracleDriver</driver>
+            <!--<connection>jdbc:oracle:thin:@titan.corp.icba.biz:1538:croma</connection>-->
+            <!--<connection>jdbc:oracle:thin:@cft-dev3.bin.bank:cft_fix</connection> AKazantsev 2016-10-04--><!-- cft-dev3 10.18.11.199:9999-->
+            <connection>jdbc:oracle:thin:@(DESCRIPTION=(ENABLE=BROKEN)(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=cft-dev3.bin.bank)(PORT=9999)))(CONNECT_DATA=(SERVICE_NAME=cft_dev2)))</connection>
+            <!-- <connection>jdbc:oracle:thin:@(DESCRIPTION=(ENABLE=BROKEN)(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=cft-dev3.bin.bank)(PORT=9999)))(CONNECT_DATA=(SERVICE_NAME=cft_fix)))</connection> -->
+
+            <!--<connection>jdbc:oracle:thin:@cft-dev3:9999:cft_fix</connection>-->
+            <!-- <login>tech_osb</login> -->
+            <!--<login>TECH_OSB</login>-->
+            <!-- <password>QsOkY7b_1</password>-->
+            <login>TECH_MDM_BUS</login>
+            <password>TECH_MDM_BUS6</password>
+
+
+
+        </database>
+        <!-- Настройки поодключения к тестовой MQ -->
+        <mq name="BIN_QM">
+            <host>msk-wscore1-test.corp.icba.biz</host>
+            <port>1415</port>
+            <login>null</login>
+            <password>null</password>
+            <qmname>CORE01.TEST.QM</qmname>
+            <channel>ADAPTER.CHANNEL</channel>
+            <version>6.0.0.0</version>
+            <ccsid>1208</ccsid>
+            <use-ssl>false</use-ssl>
+        </mq>
+    </dev>
+    <!-- Настройки каналов -->
+    <channels>
+        <channel_file>channels.cft_bin_reader.xml</channel_file>
+        <channel_file>channels.cft_bin_writer.xml</channel_file>
+        <!--<channel_file>channels.cft_bin_writer_ISO-8859-5.xml</channel_file> !-->
+    </channels>
+</440PService>
