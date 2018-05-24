@@ -8,6 +8,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -60,7 +61,6 @@ public class ZSVEngine {
         ArrayList<Date> alldates = new ArrayList<Date>();
 
         for (int i = 0; i < requests.size(); i++) {
-            //alldates.add()
             alldates.add(requests.get(i).getOperdateBeg());
             alldates.add(requests.get(i).getOperdateEnd());
         }
@@ -68,81 +68,36 @@ public class ZSVEngine {
         mindate = Collections.min(alldates);
         maxdate = Collections.max(alldates);
 
-//        Collections.sort(alldates);
-//        mindate = alldates.get(0);
-//        maxdate = alldates.get(alldates.size() - 1);
-
+        // Форматируем даты
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        String stringMindate = format.format(mindate);
+        String stringMaxdate = format.format(maxdate);
 
         System.out.println(mindate); // kvd
         System.out.println(maxdate); // kvd
 
-        // Определяем перечень счетов
-        // ...
+        System.out.println(stringMindate); // kvd
+        System.out.println(stringMaxdate); // kvd
 
         // Формируем общий запрос
-        // ...
+        String query = "select a.dtoperdate, b.code, a.amountdeb, a.amountcre" +
+                       "  from 440_p.zsv_lines_parquet a" +
+                       " inner join ( select * from 440_p.account where code in (";
 
-    }
-
-
-    /*
-    public static void hive_query_1(String query, String path) throws SQLException {
-        // query - текст запроса: "show tables in 440_p",
-        // path  - путь, по которому записывать файл с результатом: "c:\\Users\\KleymenovV\\IdeaProjects\\ZSVEngine\\out\\statsTest1.txt"
-        System.out.println("Running: " + query);
-        ResultSet res = stmt.executeQuery(query);
-
-        try {
-            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(path), StandardCharsets.UTF_8));
-
-            while (res.next()) {
-                writer.write(res.getString(1));
-                writer.write("\r\n");
+        for (int i = 0; i < requests.size(); i++) {
+            for (int j = 0; j < requests.get(i).getSelectedAccounts().size() ; j++) {
+                query = query + "'" + requests.get(i).getSelectedAccounts().get(j) + "'";
+                if (j != requests.get(i).getSelectedAccounts().size()-1) { query = query + ", "; }
             }
-
-            writer.close();
-
-        } catch (FileNotFoundException e) {
-            System.err.println("Problem opening of the file statsTest1.txt");
-        } catch (IOException e) {
-            System.err.println("Problem writing to the file statsTest1.txt");
+            if (i != requests.size()-1) { query = query + ", "; } else { query = query + ")"; };
         }
 
-        res.close();
+        query = query + ") b" +
+                        "   on a.idaccount = b.idacc and" +
+                        "      a.idbank = b.idbank " +
+                        "where a.dtoperdate between cast ('" + stringMindate + "' as date) and cast ('" + stringMaxdate + "' as date)";
+
+        System.out.println(query); // kvd
     }
-    */
-
-    /*
-    public static void hive_query_2(String query, String path) throws SQLException {
-        // query - текст запроса: "select * from 440_p.client where idclient in (2970018041, 2970018376)",
-        // path  - путь, по которому записывать файл с результатом: "c:\\Users\\KleymenovV\\IdeaProjects\\ZSVEngine\\out\\statsTest2.txt"
-        System.out.println("Running: " + query);
-        ResultSet res = stmt.executeQuery(query);
-
-        try {
-            Writer writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(path), StandardCharsets.UTF_8));
-
-            while (res.next()) {
-                writer.write(res.getString(2));
-                writer.write("\t");
-                writer.write(res.getString(3));
-                writer.write("\t");
-                writer.write(res.getString(4));
-                writer.write("\t");
-                writer.write(res.getString(5));
-                writer.write("\r\n");
-            }
-
-            writer.close();
-
-        } catch (FileNotFoundException e) {
-            System.err.println("Problem opening of the file statsTest2.txt");
-        } catch (IOException e) {
-            System.err.println("Problem writing to the file statsTest2.txt");
-        }
-
-        res.close();
-    }
-    */
 
 }
