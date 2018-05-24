@@ -14,8 +14,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 
-import com.google.common.primitives.Longs;
-import ru.binbank.ZSVRequest.ZSVRequest;
+import ru.binbank.fnsservice.contracts.ZSVRequest;
+import ru.binbank.fnsservice.contracts.ZSVResponse;
 
 
 public class ZSVEngine {
@@ -37,7 +37,7 @@ public class ZSVEngine {
                 login,       // логин "root"
                 pass         // пароль "GoodPwd1234"
                 //"jdbc:hive2://msk-hadoop01:10000/default", "root", "GoodPwd1234"
-                );
+        );
         stmt = con.createStatement();
     }
 
@@ -60,9 +60,9 @@ public class ZSVEngine {
         // Определяем временной интервал
         ArrayList<Date> alldates = new ArrayList<Date>();
 
-        for (int i = 0; i < requests.size(); i++) {
-            alldates.add(requests.get(i).getOperdateBeg());
-            alldates.add(requests.get(i).getOperdateEnd());
+        for (ZSVRequest r: requests) {
+            alldates.add(r.getOperdateBeg());
+            alldates.add(r.getOperdateEnd());
         }
 
         mindate = Collections.min(alldates);
@@ -81,10 +81,10 @@ public class ZSVEngine {
 
         // Формируем общий запрос
         String query = "select a.dtoperdate, b.code, a.amountdeb, a.amountcre" +
-                       "  from 440_p.zsv_lines_parquet a" +
-                       " inner join ( select * from 440_p.account where code in (";
+                "  from 440_p.zsv_lines_parquet a" +
+                " inner join ( select * from 440_p.account where code in (";
 
-        for (int i = 0; i < requests.size(); i++) {
+        for (ZSVRequest r: requests) {
             for (int j = 0; j < requests.get(i).getSelectedAccounts().size() ; j++) {
                 query = query + "'" + requests.get(i).getSelectedAccounts().get(j) + "'";
                 if (j != requests.get(i).getSelectedAccounts().size()-1) { query = query + ", "; }
@@ -93,9 +93,9 @@ public class ZSVEngine {
         }
 
         query = query + ") b" +
-                        "   on a.idaccount = b.idacc and" +
-                        "      a.idbank = b.idbank " +
-                        "where a.dtoperdate between cast ('" + stringMindate + "' as date) and cast ('" + stringMaxdate + "' as date)";
+                "   on a.idaccount = b.idacc and" +
+                "      a.idbank = b.idbank " +
+                "where a.dtoperdate between cast ('" + stringMindate + "' as date) and cast ('" + stringMaxdate + "' as date)";
 
         System.out.println(query); // kvd
     }
