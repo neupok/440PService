@@ -13,8 +13,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 
-import com.google.common.primitives.Longs;
-import ru.binbank.ZSVRequest.ZSVRequest;
+//import com.google.common.primitives.Longs;
+import ru.binbank.fnsservice.contracts.ZSVRequest;
 
 
 public class ZSVEngine {
@@ -51,7 +51,7 @@ public class ZSVEngine {
      * @param requests
      * @throws SQLException
      */
-    public static void getResult(ArrayList<ZSVRequest> requests) throws SQLException {
+    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException {
 
         Date maxdate;
         Date mindate;
@@ -61,8 +61,9 @@ public class ZSVEngine {
 
         for (int i = 0; i < requests.size(); i++) {
             //alldates.add()
-            alldates.add(requests.get(i).getOperdateBeg());
-            alldates.add(requests.get(i).getOperdateEnd());
+// debug
+//            alldates.add(requests.get(i).getOperdateBeg());
+//            alldates.add(requests.get(i).getOperdateEnd());
         }
 
         mindate = Collections.min(alldates);
