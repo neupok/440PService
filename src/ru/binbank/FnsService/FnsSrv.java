@@ -1,6 +1,7 @@
 package ru.binbank.fnsservice;
 
 import ru.binbank.fnsservice.contracts.ZSVRequest;
+import ru.binbank.fnsservice.contracts.ZSVResponse;
 import ru.binbank.fnsservice.utils.Command;
 import ru.binbank.fnsservice.utils.ConfigHandler;
 
@@ -31,7 +32,7 @@ public class FnsSrv {
 
         // Получение ответов
         ZSVEngine zsvEngine = new ZSVEngine();
-        Collection<ZSVResponse> zsvResponses;
+        Collection<ZSVResponse> zsvResponses = null;
         try {
             zsvResponses = zsvEngine.getResult(requests);
         } catch (SQLException e) {
@@ -40,7 +41,7 @@ public class FnsSrv {
 
         // Запись ответов
         ResponseConnector responseConnector = new ResponseConnector();
-        requestConnector.writeResponse(zsvResponses);
+        responseConnector.writeResponses(zsvResponses);
 
     }
 }
