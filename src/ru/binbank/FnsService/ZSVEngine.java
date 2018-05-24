@@ -52,7 +52,7 @@ public class ZSVEngine {
      * @param requests
      * @throws SQLException
      */
-    public static void getResult(ArrayList<ZSVRequest> requests) throws SQLException {
+    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException {
 
         Date maxdate;
         Date mindate;
