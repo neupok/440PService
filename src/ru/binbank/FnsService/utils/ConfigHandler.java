@@ -9,6 +9,19 @@ import org.apache.commons.configuration.XMLConfiguration;
  */
 public class ConfigHandler {
 
+    public int getBatchSize() {
+        return batchSize;
+    }
+
+    public void setBatchSize(int batchSize) {
+        this.batchSize = batchSize;
+    }
+
+    /**
+     * Количество обрабатываемых за один раз запросов.
+     */
+    private int batchSize;
+
     /**
      * Класс работы с конфигом
      */
@@ -18,13 +31,15 @@ public class ConfigHandler {
         if (configFileName == null)
             throw new Exception("Unknown config file");
 
-        //считаем настройки из конфига
+        // Считаем настройки из конфига
         AbstractConfiguration.setDefaultListDelimiter(';');
-        //xmlConfig = new XMLConfiguration(configFileName);
         xmlConfig = new XMLConfiguration();
         xmlConfig.setDelimiterParsingDisabled(true);
         xmlConfig.setAttributeSplittingDisabled(true);
         xmlConfig.load(configFileName);
+
+        // Чтение параметров
+        setBatchSize(Integer.parseInt(xmlConfig.getString(Dictionary.BATCH_SIZE)));
 
     }
 }

@@ -12,8 +12,7 @@ public class FnsSrv {
         // Разбор параметров командной строки
         Command command = new Command(args);
 
-        // Чтение файла конфигурации
-        String config = command.getConfigOpt();
+
 
     }
 }
