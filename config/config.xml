@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="windows-1251"?>
-<440PService>
+<FnsService>
     <!-- Настрок-->
     <process>
         <!-- Максимальное количество обрабатываемых за один раз запросов -->
@@ -56,4 +56,4 @@
         <channel_file>channels.cft_bin_writer.xml</channel_file>
         <!--<channel_file>channels.cft_bin_writer_ISO-8859-5.xml</channel_file> !-->
     </channels>
-</440PService>
+</FnsService>
