@@ -45,7 +45,7 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "\u0420\u0443\u043a\u041d\u041e\u0422\u0438\u043f", propOrder = {
-        "\u0444\u0438\u043e"
+        "fio"
 })
 public class RukNoType {
 

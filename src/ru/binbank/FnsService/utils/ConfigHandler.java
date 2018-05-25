@@ -39,7 +39,7 @@ public class ConfigHandler {
         xmlConfig.load(configFileName);
 
         // Чтение параметров
-        setBatchSize(Integer.parseInt(xmlConfig.getString(Dictionary.BATCH_SIZE)));
+        setBatchSize(Integer.parseInt(xmlConfig.getString("process." + Dictionary.BATCH_SIZE)));
 
     }
 }

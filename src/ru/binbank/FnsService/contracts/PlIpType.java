@@ -31,7 +31,7 @@ import javax.xml.bind.annotation.XmlType;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "\u041f\u043b\u0418\u041f\u0422\u0438\u043f", propOrder = {
-        "\u0444\u0438\u043e"
+        "fio"
 })
 public class PlIpType {
 
