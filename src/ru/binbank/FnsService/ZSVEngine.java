@@ -17,6 +17,8 @@ import java.util.Date;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 
+import javax.xml.datatype.XMLGregorianCalendar;
+
 
 public class ZSVEngine {
     private static String driverName = "org.apache.hive.jdbc.HiveDriver";
@@ -61,8 +63,8 @@ public class ZSVEngine {
         ArrayList<Date> alldates = new ArrayList<Date>();
 
         for (ZSVRequest r: requests) {
-            alldates.add(r.getOperdateBeg());
-            alldates.add(r.getOperdateEnd());
+            alldates.add(r.getZapnoVipis().getzaPeriod().getDateBeg().toGregorianCalendar().getTime());
+            alldates.add(r.getZapnoVipis().getzaPeriod().getDateEnd().toGregorianCalendar().getTime());
         }
 
         mindate = Collections.min(alldates);
