@@ -223,7 +223,8 @@ import javax.xml.datatype.XMLGregorianCalendar;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "", propOrder = {
-        "\u0437\u0430\u043f\u043d\u043e\u0432\u044b\u043f\u0438\u0441"
+        //"\u0437\u0430\u043f\u043d\u043e\u0432\u044b\u043f\u0438\u0441"
+        "ZapnoVipis"
 })
 @XmlRootElement(name = "\u0424\u0430\u0439\u043b")
 public class ZSVRequest {
@@ -577,14 +578,14 @@ public class ZSVRequest {
      */
     @XmlAccessorType(XmlAccessType.FIELD)
     @XmlType(name = "", propOrder = {
-            "\u0441\u0432\u041d\u041e",
-            "\u0441\u0432\u0411\u0430\u043d\u043a",
-            "\u0441\u0432\u0423\u0411\u0420",
-            "\u0441\u0432\u041f\u043b",
-            "\u0437\u0430\u041f\u0435\u0440\u0438\u043e\u0434",
-            "\u043f\u043e\u0412\u0441\u0435\u043c",
-            "\u043f\u043e\u0423\u043a\u0430\u0437\u0430\u043d\u043d\u044b\u043c",
-            "\u0440\u0443\u043a\u043e\u0432\u043e\u0434\u0438\u0442\u0435\u043b\u044c"
+            "svNo",
+            "svBank",
+            "svUBR",
+            "svPl",
+            "zaPeriod",
+            "poVsem",
+            "poUkazannim",
+            "rukovoditel"
     })
     public static class ZapnoVipis {
 
@@ -1130,9 +1131,9 @@ public class ZSVRequest {
          */
         @XmlAccessorType(XmlAccessType.FIELD)
         @XmlType(name = "", propOrder = {
-                "\u043f\u043b\u042e\u041b",
-                "\u043f\u043b\u0418\u041f",
-                "\u043f\u0444\u043b"
+                "plUl",
+                "plIp",
+                "pfl"
         })
         public static class SvPl {
 

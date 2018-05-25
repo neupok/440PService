@@ -60,8 +60,8 @@ import javax.xml.datatype.XMLGregorianCalendar;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "\u041f\u0424\u041b\u0422\u0438\u043f", propOrder = {
-        "\u0444\u0438\u043e",
-        "\u0430\u0434\u0440\u041f\u043b\u0430\u0442"
+        "fio",
+        "adrPlat"
 })
 public class PflType {
 
