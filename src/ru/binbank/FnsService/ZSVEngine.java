@@ -84,13 +84,13 @@ public class ZSVEngine {
                 "  from 440_p.zsv_lines_parquet a" +
                 " inner join ( select * from 440_p.account where code in (";
 
-        for (ZSVRequest r: requests) {
+        /*for (ZSVRequest r: requests) {
             for (int j = 0; j < requests.get(i).getSelectedAccounts().size() ; j++) {
                 query = query + "'" + requests.get(i).getSelectedAccounts().get(j) + "'";
                 if (j != requests.get(i).getSelectedAccounts().size()-1) { query = query + ", "; }
             }
             if (i != requests.size()-1) { query = query + ", "; } else { query = query + ")"; };
-        }
+        }*/
 
         query = query + ") b" +
                 "   on a.idaccount = b.idacc and" +
@@ -98,6 +98,8 @@ public class ZSVEngine {
                 "where a.dtoperdate between cast ('" + stringMindate + "' as date) and cast ('" + stringMaxdate + "' as date)";
 
         System.out.println(query); // kvd
+
+        return null;
     }
 
 }
