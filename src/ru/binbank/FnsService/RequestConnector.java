@@ -36,9 +36,6 @@ public class RequestConnector {
                 ZSVRequest zsvRequest = (ZSVRequest)jaxbUnmarshaller.unmarshal(f);
                 requests.add(zsvRequest);
                 System.out.println(zsvRequest);
-                System.out.println(zsvRequest);
-
-
             }
         } catch (JAXBException e) {
             e.printStackTrace();

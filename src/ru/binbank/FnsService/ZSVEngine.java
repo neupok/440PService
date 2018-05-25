@@ -55,8 +55,8 @@ public class ZSVEngine {
         ArrayList<Date> alldates = new ArrayList<Date>();
 
         for (ZSVRequest r: requests) {
-            alldates.add(r.getOperdateBeg());
-            alldates.add(r.getOperdateEnd());
+            alldates.add(r.getZapnoVipis().getzaPeriod().getDateBeg().toGregorianCalendar().getTime());
+            alldates.add(r.getZapnoVipis().getzaPeriod().getDateEnd().toGregorianCalendar().getTime());
         }
 
         Date mindate = Collections.min(alldates);
@@ -72,15 +72,19 @@ public class ZSVEngine {
                 "  from 440_p.zsv_lines_parquet a" +
                 " inner join ( select * from 440_p.account where code in (";
 
-        for (Iterator it = requests.iterator(); it.hasNext(); ) {
-            ZSVRequest element = (ZSVRequest)it.next();
+        for (Iterator itRequests = requests.iterator(); itRequests.hasNext(); ) {
+            ZSVRequest objectRequests = (ZSVRequest)itRequests.next();
 
-            for (int j = 0; j < element.getSelectedAccounts().size() ; j++) {
-                query = query + "'" + element.getSelectedAccounts().get(j) + "'";
-                if (j != element.getSelectedAccounts().size()-1) { query = query + ", "; }
+            for (Iterator itPoUkazannim = objectRequests.getZapnoVipis().getpoUkazannim().iterator(); itPoUkazannim.hasNext(); ) {
+                ZSVRequest.ZapnoVipis.poUkazannim objectPoUkazannim = (ZSVRequest.ZapnoVipis.poUkazannim)itPoUkazannim.next();
+                query = query + "'" + objectPoUkazannim.getNomSch() + "'";
+
+                if (itPoUkazannim.hasNext()) { query = query + ", "; } else { query = query + ")"; };
+
+                //if (j != element.getSelectedAccounts().size()-1) { query = query + ", "; }
             }
 
-            if (it.hasNext()) { query = query + ", "; } else { query = query + ")"; };
+            if (itRequests.hasNext()) { query = query + ", "; } else { query = query + ")"; };
         }
 
         query = query + ") b" +
@@ -88,7 +92,7 @@ public class ZSVEngine {
                 "      a.idbank = b.idbank " +
                 "where a.dtoperdate between cast ('" + stringMindate + "' as date) and cast ('" + stringMaxdate + "' as date)";
 
-        //System.out.println(query); // kvd
+        System.out.println(query); // kvd
 
         return query;
     }
