@@ -6,35 +6,18 @@ import java.util.Date;
  * Ответы на запросы выписки.
  */
 public class ZSVResponse {
-    private String msgId;
-    private Date operdateBeg;
-    private Date operdateEnd;
+    private Date operdate;
     private String code;
     private String amountDeb;
     private String amountCred;
 
-    public String getMsgId() {
-        return msgId;
+
+    public Date getOperdate() {
+        return operdate;
     }
 
-    public void setMsgId(String msgId) {
-        this.msgId = msgId;
-    }
-
-    public Date getOperdateBeg() {
-        return operdateBeg;
-    }
-
-    public void setOperdateBeg(Date operdateBeg) {
-        this.operdateBeg = operdateBeg;
-    }
-
-    public Date getOperdateEnd() {
-        return operdateEnd;
-    }
-
-    public void setOperdateEnd(Date operdateEnd) {
-        this.operdateEnd = operdateEnd;
+    public void setOperdate(Date operdate) {
+        this.operdate = operdate;
     }
 
     public String getCode() {

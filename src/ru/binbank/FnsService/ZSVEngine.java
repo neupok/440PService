@@ -1,15 +1,12 @@
 package ru.binbank.fnsservice;
-//import ru.binbank.FnsService.*;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.Date;
 
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
@@ -17,7 +14,7 @@ import ru.binbank.fnsservice.contracts.ZSVResponse;
 
 public class ZSVEngine {
     private static String driverName = "org.apache.hive.jdbc.HiveDriver";
-    private static Connection hiveConnection;
+    private static  Connection hiveConnection;
     private static Statement stmt;
 
 
@@ -79,9 +76,7 @@ public class ZSVEngine {
                 ZSVRequest.ZapnoVipis.poUkazannim objectPoUkazannim = (ZSVRequest.ZapnoVipis.poUkazannim)itPoUkazannim.next();
                 query = query + "'" + objectPoUkazannim.getNomSch() + "'";
 
-                if (itPoUkazannim.hasNext()) { query = query + ", "; } else { query = query + ")"; };
-
-                //if (j != element.getSelectedAccounts().size()-1) { query = query + ", "; }
+                if (itPoUkazannim.hasNext()) { query = query + ", "; }; //else { query = query + ")"; };
             }
 
             if (itRequests.hasNext()) { query = query + ", "; } else { query = query + ")"; };
@@ -103,7 +98,7 @@ public class ZSVEngine {
      * @param requests
      * @throws SQLException
      */
-    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException {
+    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException {
 
         // Формировапние текста запроса
         String hiveQuery = hiveQuery(requests);
@@ -111,12 +106,24 @@ public class ZSVEngine {
 
         hiveConnect("jdbc:hive2://msk-hadoop01:10000/default", "root", "GoodPwd1234");
 
-        ResultSet resultSet = stmt.executeQuery(hiveQuery);
-
-        hiveDisconnect();
+        ResultSet rs = stmt.executeQuery(hiveQuery);
 
         // Заполнение массива строками результата
         ArrayList<ZSVResponse> answer = new ArrayList<>();
+        SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+        ZSVResponse zsvResponse = new ZSVResponse();
+
+        while (rs.next()) {
+            zsvResponse.setOperdate(formatResponse.parse(rs.getString(1)));
+            zsvResponse.setCode(rs.getString(2));
+            zsvResponse.setAmountDeb(rs.getString(3));
+            zsvResponse.setAmountCred(rs.getString(4));
+
+            answer.add(zsvResponse);
+        }
+
+        hiveDisconnect();
 
         return answer;
     }
