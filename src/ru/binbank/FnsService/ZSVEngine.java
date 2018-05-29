@@ -13,14 +13,18 @@ import ru.binbank.fnsservice.contracts.ZSVResponse;
 
 
 public class ZSVEngine {
+    // @todo - убрать static
+
     private static String driverName = "org.apache.hive.jdbc.HiveDriver";
-    private static  Connection hiveConnection;
+    private static Connection hiveConnection;
     private static Statement stmt;
 
+    // @todo - добавить конструктор класса, в который передаются параметры подключения
 
     public static void hiveConnect(String str_connect, String login, String pass) throws SQLException {
         try {
             Class.forName(driverName);
+// @todo - переработать
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
             System.exit(1);
@@ -69,6 +73,7 @@ public class ZSVEngine {
                 "  from 440_p.zsv_lines_parquet a" +
                 " inner join ( select * from 440_p.account where code in (";
 
+        // @todo - for (ZSVRequest r: requests)
         for (Iterator itRequests = requests.iterator(); itRequests.hasNext(); ) {
             ZSVRequest objectRequests = (ZSVRequest)itRequests.next();
 
@@ -101,9 +106,11 @@ public class ZSVEngine {
     public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException {
 
         // Формировапние текста запроса
+        // @todo - глагол!
         String hiveQuery = hiveQuery(requests);
         System.out.println(hiveQuery); // kvd
 
+        // @todo - убрать hardcode, параметры передаются в конструктор
         hiveConnect("jdbc:hive2://msk-hadoop01:10000/default", "root", "GoodPwd1234");
 
         ResultSet rs = stmt.executeQuery(hiveQuery);
@@ -112,9 +119,9 @@ public class ZSVEngine {
         ArrayList<ZSVResponse> answer = new ArrayList<>();
         SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        ZSVResponse zsvResponse = new ZSVResponse();
-
         while (rs.next()) {
+            ZSVResponse zsvResponse = new ZSVResponse();
+
             zsvResponse.setOperdate(formatResponse.parse(rs.getString(1)));
             zsvResponse.setCode(rs.getString(2));
             zsvResponse.setAmountDeb(rs.getString(3));
@@ -124,6 +131,8 @@ public class ZSVEngine {
         }
 
         hiveDisconnect();
+
+        // @todo - а не надо ли закрывать запрос и/или соединение в блоке catch или finally?
 
         return answer;
     }
