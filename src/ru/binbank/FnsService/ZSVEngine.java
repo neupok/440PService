@@ -11,43 +11,68 @@ import java.util.Date;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 
+import static ru.binbank.fnsservice.utils.Dictionary.CONNECT_STRING;
+
 
 public class ZSVEngine {
-    private static String driverName = "org.apache.hive.jdbc.HiveDriver";
-    private static Connection hiveConnection;
-    private static Statement stmt;
-    private static ZSVResponse zsvResponse; // = new ZSVResponse();
+    // @todo - убрать static - DONE
+
+    private String driverName = "org.apache.hive.jdbc.HiveDriver";
+    private Connection hiveConnection;
+    //private Statement stmt;
+
+    private String connectString;
+    private String connectLogin;
+    private String connectPassword;
+
+    // @todo - добавить конструктор класса, в который передаются параметры подключения - DONE
+
+    ZSVEngine(String connectStr, String connectLog, String connectPass) {
+        this.connectString = connectStr;
+        this.connectLogin = connectLog;
+        this.connectPassword = connectPass;
+    }
 
 
-    public static void hiveConnect(String str_connect, String login, String pass) throws SQLException {
+    public void createHiveConnection() throws SQLException {
         try {
             Class.forName(driverName);
+// @todo - переработать
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
             System.exit(1);
         }
 
         hiveConnection = DriverManager.getConnection(
-                str_connect, // строка соединения "jdbc:hive2://msk-hadoop01:10000/default"
-                login,       // логин "root"
-                pass         // пароль "GoodPwd1234"
-                //"jdbc:hive2://msk-hadoop01:10000/default", "root", "GoodPwd1234"
+                connectString,     // строка соединения "jdbc:hive2://msk-hadoop01:10000/default"
+                connectLogin,      // логин "root"
+                connectPassword    // пароль "GoodPwd1234"
         );
-        stmt = hiveConnection.createStatement();
+
     }
 
 
-    public static void hiveDisconnect() throws SQLException {
-        stmt.close();
+    public void closeHiveConnection() throws SQLException {
         hiveConnection.close();
     }
+
+
+    public Statement getStatement() {
+        return hiveConnection.createStatement();
+    }
+
+
+    public void closeStatement(Statement statement) {
+        statement.close();
+    }
+
 
     /**
      * Формирование текста запроса
      * @param requests
      * @throws SQLException
      */
-    public String hiveQuery(Collection<ZSVRequest> requests) {
+    public String getHiveQuery(Collection<ZSVRequest> requests) {
 
         // Определяем временной интервал
         ArrayList<Date> alldates = new ArrayList<Date>();
@@ -70,6 +95,7 @@ public class ZSVEngine {
                 "  from 440_p.zsv_lines_parquet a" +
                 " inner join ( select * from 440_p.account where code in (";
 
+        // @todo - for (ZSVRequest r: requests)
         for (Iterator itRequests = requests.iterator(); itRequests.hasNext(); ) {
             ZSVRequest objectRequests = (ZSVRequest)itRequests.next();
 
@@ -102,31 +128,39 @@ public class ZSVEngine {
     public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException {
 
         // Формировапние текста запроса
-        String hiveQuery = hiveQuery(requests);
+        // @todo - глагол! - DONE
+        String hiveQuery = getHiveQuery(requests);
         System.out.println(hiveQuery); // kvd
 
-        hiveConnect("jdbc:hive2://msk-hadoop01:10000/default", "root", "GoodPwd1234");
+        // @todo - убрать hardcode, параметры передаются в конструктор - DONE
+        createHiveConnection();
 
-        ResultSet rs = stmt.executeQuery(hiveQuery);
+        // Выполнение запроса
+        Statement stmt = getStatement();
+        ResultSet resultSet = stmt.executeQuery(hiveQuery);
 
         // Заполнение массива строками результата
-        ArrayList<ZSVResponse> responses = new ArrayList<ZSVResponse>();
+        ArrayList<ZSVResponse> responses = new ArrayList<>();
         SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        while (rs.next()) {
-            zsvResponse = new ZSVResponse();
+        while (resultSet.next()) {
+            ZSVResponse zsvResponse = new ZSVResponse();
 
-            zsvResponse.setOperdate(formatResponse.parse(rs.getString(1)));
-            zsvResponse.setCode(rs.getString(2));
-            zsvResponse.setAmountDeb(rs.getString(3));
-            zsvResponse.setAmountCred(rs.getString(4));
+            zsvResponse.setOperdate(formatResponse.parse(resultSet.getString(1)));
+            zsvResponse.setCode(resultSet.getString(2));
+            zsvResponse.setAmountDeb(resultSet.getString(3));
+            zsvResponse.setAmountCred(resultSet.getString(4));
 
             responses.add(zsvResponse);
         }
 
-        hiveDisconnect();
+        closeHiveConnection();
+        closeStatement(stmt);
 
-        return responses;
+
+        // @todo - а не надо ли закрывать запрос и/или соединение в блоке catch или finally?
+
+        return answer;
     }
 
 }

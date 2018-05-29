@@ -6,11 +6,15 @@ import java.util.Date;
  * Ответы на запросы выписки.
  */
 public class ZSVResponse {
-    private Date operdate;
-    private String code;
-    private String amountDeb;
-    private String amountCred;
+    //private Date operdate;
+    //private String code;
+    //private String amountDeb;
+    //private String amountCred;
 
+    public Date operdate;
+    public String code;
+    public String amountDeb;
+    public String amountCred;
 
     public Date getOperdate() {
         return operdate;

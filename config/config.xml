@@ -4,6 +4,12 @@
     <process>
         <!-- Максимальное количество обрабатываемых за один раз запросов -->
         <batch_size>100</batch_size>
+        <!-- Строка подключения -->
+        <connect_string>"jdbc:hive2://msk-hadoop01:10000/default"</connect_string>
+        <!-- Логин подключения -->
+        <connect_login>"root"</connect_login>
+        <!-- Пароль подключения -->
+        <connect_password>"GoodPwd1234"</connect_password>
     </process>
 
 <!-- Дальше только для примера -->

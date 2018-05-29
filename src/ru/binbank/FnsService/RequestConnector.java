@@ -31,7 +31,7 @@ public class RequestConnector {
 
             Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
 
-            File dir = new File(".");
+            File dir = new File("./input");
             for (File f: dir.listFiles()) {
                 ZSVRequest zsvRequest = (ZSVRequest)jaxbUnmarshaller.unmarshal(f);
                 requests.add(zsvRequest);
