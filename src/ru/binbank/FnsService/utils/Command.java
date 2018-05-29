@@ -8,6 +8,7 @@ import org.apache.commons.cli.*;
 public class Command {
     // Команды
     private static final String CONFIG_OPT = "config";
+    private static final String INPUT_DIR_OPT = "input_dir";
 
     // Значения по умолчанию
     private static final String DEFAULT_CONFIG_XML = "config.xml";
@@ -22,6 +23,12 @@ public class Command {
                 .hasArg()
                 .withArgName("FILE")
                 .create());
+        options.addOption(OptionBuilder.withLongOpt(INPUT_DIR_OPT)
+                .withDescription("Set input directory for requests")
+                .hasArg()
+                .withArgName("FILE")
+                .create());
+
 
         // Чтение параметров
         CommandLineParser parser = new PosixParser();
@@ -38,5 +45,12 @@ public class Command {
      */
     public String getConfigOpt() {
         return line.getOptionValue(CONFIG_OPT, DEFAULT_CONFIG_XML);
+    }
+
+    /**
+     * Возвращает директорию входящих сообщений  -input_dir inputDirName
+     */
+    public String getInputDirOpt() {
+        return line.getOptionValue(INPUT_DIR_OPT);
     }
 }
