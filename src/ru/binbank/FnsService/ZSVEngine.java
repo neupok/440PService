@@ -14,8 +14,9 @@ import ru.binbank.fnsservice.contracts.ZSVResponse;
 
 public class ZSVEngine {
     private static String driverName = "org.apache.hive.jdbc.HiveDriver";
-    private static  Connection hiveConnection;
+    private static Connection hiveConnection;
     private static Statement stmt;
+    private static ZSVResponse zsvResponse; // = new ZSVResponse();
 
 
     public static void hiveConnect(String str_connect, String login, String pass) throws SQLException {
@@ -109,23 +110,23 @@ public class ZSVEngine {
         ResultSet rs = stmt.executeQuery(hiveQuery);
 
         // Заполнение массива строками результата
-        ArrayList<ZSVResponse> answer = new ArrayList<>();
+        ArrayList<ZSVResponse> responses = new ArrayList<ZSVResponse>();
         SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        ZSVResponse zsvResponse = new ZSVResponse();
-
         while (rs.next()) {
+            zsvResponse = new ZSVResponse();
+
             zsvResponse.setOperdate(formatResponse.parse(rs.getString(1)));
             zsvResponse.setCode(rs.getString(2));
             zsvResponse.setAmountDeb(rs.getString(3));
             zsvResponse.setAmountCred(rs.getString(4));
 
-            answer.add(zsvResponse);
+            responses.add(zsvResponse);
         }
 
         hiveDisconnect();
 
-        return answer;
+        return responses;
     }
 
 }
