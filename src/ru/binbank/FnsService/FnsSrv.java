@@ -6,6 +6,7 @@ import ru.binbank.fnsservice.utils.Command;
 import ru.binbank.fnsservice.utils.ConfigHandler;
 
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.Collection;
 
 public class FnsSrv {
@@ -27,20 +28,22 @@ public class FnsSrv {
         }
 
         // Чтение входящих сообщений
-        RequestConnector requestConnector = new RequestConnector(configHandler.getBatchSize());
+        ru.binbank.fnsservice.RequestConnector requestConnector = new ru.binbank.fnsservice.RequestConnector(configHandler.getBatchSize());
         Collection<ZSVRequest> requests = requestConnector.fetchRequests();
 
         // Получение ответов
-        ZSVEngine zsvEngine = new ZSVEngine();
+        ru.binbank.fnsservice.ZSVEngine zsvEngine = new ru.binbank.fnsservice.ZSVEngine();
         Collection<ZSVResponse> zsvResponses = null;
         try {
             zsvResponses = zsvEngine.getResult(requests);
         } catch (SQLException e) {
             e.printStackTrace();
+        } catch (ParseException e) {
+            e.printStackTrace();
         }
 
         // Запись ответов
-        ResponseConnector responseConnector = new ResponseConnector();
+        ru.binbank.fnsservice.ResponseConnector responseConnector = new ru.binbank.fnsservice.ResponseConnector();
         responseConnector.writeResponses(zsvResponses);
 
     }

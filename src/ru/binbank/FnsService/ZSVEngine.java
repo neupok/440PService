@@ -1,28 +1,20 @@
 package ru.binbank.fnsservice;
-//import ru.binbank.FnsService.*;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
+import java.util.*;
 import java.util.Date;
 
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 
-import javax.xml.datatype.XMLGregorianCalendar;
-
 
 public class ZSVEngine {
     private static String driverName = "org.apache.hive.jdbc.HiveDriver";
-    private static Connection con;
+    private static  Connection hiveConnection;
     private static Statement stmt;
 
 
@@ -34,30 +26,27 @@ public class ZSVEngine {
             System.exit(1);
         }
 
-        con = DriverManager.getConnection(
+        hiveConnection = DriverManager.getConnection(
                 str_connect, // строка соединения "jdbc:hive2://msk-hadoop01:10000/default"
                 login,       // логин "root"
                 pass         // пароль "GoodPwd1234"
                 //"jdbc:hive2://msk-hadoop01:10000/default", "root", "GoodPwd1234"
         );
-        stmt = con.createStatement();
+        stmt = hiveConnection.createStatement();
     }
 
 
     public static void hiveDisconnect() throws SQLException {
         stmt.close();
-        con.close();
+        hiveConnection.close();
     }
 
     /**
-     * Получение ответов на запросы ФНС.
+     * Формирование текста запроса
      * @param requests
      * @throws SQLException
      */
-    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException {
-
-        Date maxdate;
-        Date mindate;
+    public String hiveQuery(Collection<ZSVRequest> requests) {
 
         // Определяем временной интервал
         ArrayList<Date> alldates = new ArrayList<Date>();
@@ -67,32 +56,31 @@ public class ZSVEngine {
             alldates.add(r.getZapnoVipis().getzaPeriod().getDateEnd().toGregorianCalendar().getTime());
         }
 
-        mindate = Collections.min(alldates);
-        maxdate = Collections.max(alldates);
+        Date mindate = Collections.min(alldates);
+        Date maxdate = Collections.max(alldates);
 
         // Форматируем даты
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
         String stringMindate = format.format(mindate);
         String stringMaxdate = format.format(maxdate);
 
-        System.out.println(mindate); // kvd
-        System.out.println(maxdate); // kvd
-
-        System.out.println(stringMindate); // kvd
-        System.out.println(stringMaxdate); // kvd
-
         // Формируем общий запрос
         String query = "select a.dtoperdate, b.code, a.amountdeb, a.amountcre" +
                 "  from 440_p.zsv_lines_parquet a" +
                 " inner join ( select * from 440_p.account where code in (";
 
-        /*for (ZSVRequest r: requests) {
-            for (int j = 0; j < requests.get(i).getSelectedAccounts().size() ; j++) {
-                query = query + "'" + requests.get(i).getSelectedAccounts().get(j) + "'";
-                if (j != requests.get(i).getSelectedAccounts().size()-1) { query = query + ", "; }
+        for (Iterator itRequests = requests.iterator(); itRequests.hasNext(); ) {
+            ZSVRequest objectRequests = (ZSVRequest)itRequests.next();
+
+            for (Iterator itPoUkazannim = objectRequests.getZapnoVipis().getpoUkazannim().iterator(); itPoUkazannim.hasNext(); ) {
+                ZSVRequest.ZapnoVipis.poUkazannim objectPoUkazannim = (ZSVRequest.ZapnoVipis.poUkazannim)itPoUkazannim.next();
+                query = query + "'" + objectPoUkazannim.getNomSch() + "'";
+
+                if (itPoUkazannim.hasNext()) { query = query + ", "; }; //else { query = query + ")"; };
             }
-            if (i != requests.size()-1) { query = query + ", "; } else { query = query + ")"; };
-        }*/
+
+            if (itRequests.hasNext()) { query = query + ", "; } else { query = query + ")"; };
+        }
 
         query = query + ") b" +
                 "   on a.idaccount = b.idacc and" +
@@ -101,7 +89,43 @@ public class ZSVEngine {
 
         System.out.println(query); // kvd
 
-        return null;
+        return query;
+    }
+
+
+    /**
+     * Получение ответов на запросы ФНС.
+     * @param requests
+     * @throws SQLException
+     */
+    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException {
+
+        // Формировапние текста запроса
+        String hiveQuery = hiveQuery(requests);
+        System.out.println(hiveQuery); // kvd
+
+        hiveConnect("jdbc:hive2://msk-hadoop01:10000/default", "root", "GoodPwd1234");
+
+        ResultSet rs = stmt.executeQuery(hiveQuery);
+
+        // Заполнение массива строками результата
+        ArrayList<ZSVResponse> answer = new ArrayList<>();
+        SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+        ZSVResponse zsvResponse = new ZSVResponse();
+
+        while (rs.next()) {
+            zsvResponse.setOperdate(formatResponse.parse(rs.getString(1)));
+            zsvResponse.setCode(rs.getString(2));
+            zsvResponse.setAmountDeb(rs.getString(3));
+            zsvResponse.setAmountCred(rs.getString(4));
+
+            answer.add(zsvResponse);
+        }
+
+        hiveDisconnect();
+
+        return answer;
     }
 
 }
