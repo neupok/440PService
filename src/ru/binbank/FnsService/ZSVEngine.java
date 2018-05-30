@@ -51,7 +51,7 @@ public class ZSVEngine {
         // Формирование текста запроса
         String query = "select idbank, bic from 440_p.bank where bic in ("
                 .concat(bics.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
-                .concat(");");
+                .concat(")");
 
         // Выполнение запроса
         Statement stmt = hiveConnection.createStatement();
@@ -73,10 +73,66 @@ public class ZSVEngine {
     /**
      * Проверка, что ИНН существует в базе.
      * @param inns
-     * @return
+     * @return Массив найденных ИНН
      */
-    private Collection<String> selectExistingInn(Collection<String> inns, Long idBank) {
+    private Map<String, Long> selectExistingInn(Collection<String> inns, Long idBank) throws SQLException {
+        // Формирование текста запроса
+        String query = "select inn, idclient from 440_p.inn where inn in ("
+                .concat(inns.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
+                .concat(") and idbank=").concat(idBank.toString());
 
+        // Выполнение запроса
+        Statement stmt = hiveConnection.createStatement();
+        ResultSet resultSet = stmt.executeQuery(query);
+
+        // Разбор результата
+        HashMap<String, Long> result = new HashMap<>();
+
+        while (resultSet.next()) {
+            result.put(resultSet.getString("inn"), resultSet.getLong("idclient"));
+        }
+
+        resultSet.close();
+        stmt.close();
+
+        return result;
+    }
+
+    private Map<String, Map<String, Object> > selectAccounts(Collection<String> accCodes, Collection<Long> idClients, Long idBank) throws SQLException {
+        // Формирование текста запроса
+        String query = "select idacc, idclient, code from 440_p.account where code in ("
+                .concat(accCodes.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
+                .concat(") and idbank=").concat(idBank.toString()).concat("\n")
+                .concat("union all\n")
+                .concat("select idacc, idclient, code from 440_p.account where idclient in (")
+                .concat(idClients.stream().map(aLong -> aLong.toString()).collect(Collectors.joining(",")))
+                .concat(") and idbank=").concat(idBank.toString());
+
+        // Выполнение запроса
+        Statement stmt = hiveConnection.createStatement();
+        ResultSet resultSet = stmt.executeQuery(query);
+
+        // Разбор результата
+        HashMap<String, Map<String, Object> > result = new HashMap<>();
+
+        while (resultSet.next()) {
+            HashMap<String, Object> rowMap = new HashMap<>();
+            // Заполняем значениями атрибутов
+            rowMap.put("idacc", resultSet.getLong("idacc"));
+            rowMap.put("idclient", resultSet.getLong("idclient"));
+
+            result.put(resultSet.getString("code"), rowMap);
+        }
+
+        resultSet.close();
+        stmt.close();
+
+        return result;
+    }
+
+    private Collection<Map<String, Object> > selectRest(Collection<Long> idAccs, Long idBank) {
+        //debug
+        return null;
     }
 
 
@@ -225,5 +281,4 @@ public class ZSVEngine {
         //return answer;
         return null;
     }
-
 }
