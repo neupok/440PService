@@ -15,6 +15,8 @@ import org.apache.commons.lang.StringUtils;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 
+import javax.xml.datatype.DatatypeFactory;
+
 public class ZSVEngine {
     private String driverName = "org.apache.hive.jdbc.HiveDriver";
     private Connection hiveConnection;
@@ -73,9 +75,9 @@ public class ZSVEngine {
      * @param inns
      * @return
      */
-    private Collection<String> selectExistingInn(Collection<String> inns, Long idBank) {
+    private Collection<String> selectExistingInn(Collection<String> inns, Long idBank) throws SQLException {
         // Формирование текста запроса
-        String query = "select inn, idbank from 440_p.inn where inn in ("
+        String query = "select inn from 440_p.inn where inn in ("
                 .concat(inns.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
                 .concat(") and idbank = ".concat(String.valueOf(idBank)));
 
@@ -84,13 +86,13 @@ public class ZSVEngine {
         ResultSet resultSet = stmt.executeQuery(query);
 
         // Разбор результата
-        HashMap<String, Long> result = new HashMap<String, Long>();
+        ArrayList<String> result = new ArrayList<String>();
 
         while (resultSet.next()) {
-            result.put(resultSet.getString("bic"), resultSet.getLong("idbank"));
+            result.add(resultSet.getString("bic"));
         }
 
-
+        return result;
     }
 
 
