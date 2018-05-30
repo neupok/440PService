@@ -89,7 +89,7 @@ public class ZSVEngine {
         ArrayList<String> result = new ArrayList<String>();
 
         while (resultSet.next()) {
-            result.add(resultSet.getString("bic"));
+            result.add(resultSet.getString("inn"));
         }
 
         return result;
@@ -141,6 +141,7 @@ public class ZSVEngine {
                 " inner join ( select * from 440_p.account where code in (";
 
         // @todo - for (ZSVRequest r: requests)
+
         for (Iterator itRequests = requests.iterator(); itRequests.hasNext(); ) {
             ZSVRequest objectRequests = (ZSVRequest)itRequests.next();
 
@@ -153,6 +154,19 @@ public class ZSVEngine {
 
             if (itRequests.hasNext()) { query = query + ", "; } else { query = query + ")"; };
         }
+
+        /*
+        for (Iterator itRequests = requests.iterator(); itRequests.hasNext(); ) {
+            ZSVRequest objectRequests = (ZSVRequest)itRequests.next();
+
+            query = query.concat(objectRequests.getZapnoVipis().getpoUkazannim().stream().map(x -> "'" + x.getNomSch() + "'").collect(Collectors.joining(",")));
+
+        }
+        */
+
+
+
+
 
         query = query + ") b" +
                 "   on a.idaccount = b.idacc and" +
