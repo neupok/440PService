@@ -14,6 +14,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
+import sun.awt.image.ImageWatched;
 
 import javax.xml.datatype.DatatypeFactory;
 
@@ -131,11 +132,11 @@ public class ZSVEngine {
         return result;
     }
 
-    private Collection<Map<String, Object> > selectRest(Collection<Long> idAccs, Long idBank) throws SQLException {
+    private Collection<Map<String, Object> > selectRest(Collection<Long> idAccs, /*minDate, maxDate,*/ Long idBank) throws SQLException {
         // Формирование текста запроса
         String query = "select amount, idaccount, dt from 440_p.rest where idaccount in ("
-                .concat(idAccs.stream().map(n -> String.valueOf(n)).collect(Collectors.joining(","))) // quote
-                .concat(") and idbank=").concat(idBank.toString()).concat("\n");
+                .concat(idAccs.stream().map(n -> n.toString()).collect(Collectors.joining(","))) // quote
+                .concat(") and idbank=").concat(idBank.toString());
 
         // Выполнение запроса
         Statement stmt = hiveConnection.createStatement();
@@ -251,6 +252,47 @@ public class ZSVEngine {
      * @throws SQLException
      */
     public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException, ClassNotFoundException {
+        // Определение идентификаторов банков
+        LinkedList<String> bics = new LinkedList<>();
+        for (ZSVRequest r: requests) {
+            bics.add(r.getZapnoVipis().getsvBank().getBIK());
+        }
+        Map<String, Long> banks = selectBankIdByBIC(bics);
+
+        // TODO: 30.05.2018 сделать проверки и правильную начитку банка
+        Long idBank = new Long(1);
+
+        // Поиск клиентов
+        LinkedList<String> inns = new LinkedList<>();
+        for (ZSVRequest r: requests) {
+            inns.add(r.getZapnoVipis().getSvPl().getPlUl().getINNUL());
+        }
+        Map<String, Long> existingInns = selectExistingInn(inns, idBank);
+        // Клиентов, по которым пришел запрос по всем счетам, выделяем в отдельный список
+        LinkedList<Long> allAccsClients = new LinkedList<>();
+        for (ZSVRequest r: requests) {
+            if (r.getZapnoVipis().getpoVsem() != null)
+                allAccsClients.add(existingInns.get(r.getZapnoVipis().getSvPl().getPlUl().getINNUL()));
+        }
+
+        // Поиск счетов
+        LinkedList<String> accCodes = new LinkedList<>();
+        for (ZSVRequest r: requests) {
+            for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
+                accCodes.add(poUkazannim.getNomSch());
+            }
+        }
+        Map<String, Map<String, Object> > accounts = selectAccounts(accCodes, allAccsClients, idBank);
+
+        // Запрос остатков
+        LinkedList<Long> idAccs = new LinkedList<>();
+        for (Map<String, Object> val: accounts.values()) {
+            idAccs.add((Long) val.get("idacc"));
+        }
+        Collection<Map<String, Object> > rest = selectRest(idAccs, idBank);
+
+        // TODO: 30.05.2018 Запрос операций
+
 
         ArrayList<ZSVResponse> responses = new ArrayList<>();
 
