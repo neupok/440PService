@@ -12,7 +12,9 @@ import java.util.Date;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 
-import static ru.binbank.fnsservice.utils.Dictionary.CONNECT_STRING;
+import javax.xml.datatype.DatatypeFactory;
+
+//import static ru.binbank.fnsservice.utils.Dictionary.CONNECT_STRING;
 
 
 public class ZSVEngine {
@@ -28,7 +30,7 @@ public class ZSVEngine {
 
     // @todo - добавить конструктор класса, в который передаются параметры подключения - DONE
 
-    ZSVEngine(String connectStr, String connectLog, String connectPass) {
+    public ZSVEngine(String connectStr, String connectLog, String connectPass) {
         this.connectString = connectStr;
         this.connectLogin = connectLog;
         this.connectPassword = connectPass;
@@ -58,13 +60,21 @@ public class ZSVEngine {
     }
 
 
-    public Statement getStatement() {
-        return hiveConnection.createStatement();
+    public Statement getStatement() throws SQLException {
+        try {
+            return hiveConnection.createStatement();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
 
     public void closeStatement(Statement statement) {
-        statement.close();
+        try {
+            statement.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -128,54 +138,71 @@ public class ZSVEngine {
      */
     public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException {
 
-        // Формировапние текста запроса
-        // @todo - глагол! - DONE
-        String hiveQuery = getHiveQuery(requests);
-        System.out.println(hiveQuery); // kvd
-
-        // @todo - убрать hardcode, параметры передаются в конструктор - DONE
-        createHiveConnection();
-
-        // Выполнение запроса
-        Statement stmt = getStatement();
-        ResultSet resultSet = stmt.executeQuery(hiveQuery);
-
-        // Заполнение массива строками результата
         ArrayList<ZSVResponse> responses = new ArrayList<>();
-        SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        // Группировка объектов по счетам
-        //java.util.Map<String, ZSVResponse.SvBank.Svedenia.Operacii> opersByAcc = new HashMap<String, ZSVResponse.SvBank.Svedenia.Operacii>();
-        Map opersByAcc = new HashMap<String, ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> >();
+        createHiveConnection();
+        Statement stmt = getStatement();
 
-        while (resultSet.next()) {
-            ZSVResponse zsvResponse = new ZSVResponse();
+        try {
+            // Формировапние текста запроса
+            // @todo - глагол! - DONE
+            String hiveQuery = getHiveQuery(requests);
+            System.out.println(hiveQuery); // kvd
+
+            // @todo - убрать hardcode, параметры передаются в конструктор - DONE
+            //createHiveConnection();
+
+            // Выполнение запроса
+            //Statement stmt = getStatement();
+            ResultSet resultSet = stmt.executeQuery(hiveQuery);
+
+            // Заполнение массива строками результата
+            //ArrayList<ZSVResponse> responses = new ArrayList<>();
+            SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+            // Группировка объектов по счетам
+            //java.util.Map<String, ZSVResponse.SvBank.Svedenia.Operacii> opersByAcc = new HashMap<String, ZSVResponse.SvBank.Svedenia.Operacii>();
+            Map opersByAcc = new HashMap<String, ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>>();
+
+            while (resultSet.next()) {
+                ZSVResponse zsvResponse = new ZSVResponse();
 
 //            ZSVResponse.SvBank svBank = new ZSVResponse.SvBank();
 //            ZSVResponse.SvBank.Svedenia svedenia = new ZSVResponse.SvBank.Svedenia();
 
-            ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
+                ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
 
-            // a.dtoperdate
-            ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc rekvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
-            rekvDoc.setDataDoc(formatResponse.parse(resultSet.getString(1)));
-            // Номер счета
-            String accountCode = resultSet.getString(2);
-            // a.amountdeb
-            ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
-            summaOper.setDebet(resultSet.getString(3));
-            // a.amountcre
-            summaOper.setDebet(resultSet.getString(4));
+                // a.dtoperdate
+                ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc rekvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
 
-            // Сборка объекта
-            operacii.setRekvDoc(rekvDoc);
-            operacii.setSummaOper(summaOper);
+                GregorianCalendar dataDocGreg = new GregorianCalendar();
+                dataDocGreg.setTime(formatResponse.parse(resultSet.getString(1)));
+                javax.xml.datatype.XMLGregorianCalendar dataDocGregXML = DatatypeFactory.newInstance().newXMLGregorianCalendar(dataDocGreg);
+                rekvDoc.setDataDoc(dataDocGregXML);
 
-            // Сохранение в разрезе счета
-            if (!opersByAcc.containsKey(accountCode))
-                opersByAcc.put(accountCode, new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>());
+                // Номер счета
+                String accountCode = resultSet.getString(2);
 
-            ((ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>)opersByAcc.get(accountCode)).add(operacii);
+                // Суммы по операции
+                ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
+
+                // a.amountdeb
+                BigDecimal amountDebetBigDecimal = new BigDecimal(resultSet.getString(3));
+                summaOper.setDebet( amountDebetBigDecimal);
+
+                // a.amountcre
+                BigDecimal amountCreditBigDecimal = new BigDecimal(resultSet.getString(4));
+                summaOper.setCredit(amountCreditBigDecimal);
+
+                // Сборка объекта
+                operacii.setRekvDoc(rekvDoc);
+                operacii.setSummaOper(summaOper);
+
+                // Сохранение в разрезе счета
+                if (!opersByAcc.containsKey(accountCode))
+                    opersByAcc.put(accountCode, new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>());
+
+                ((ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>) opersByAcc.get(accountCode)).add(operacii);
 
             /*
             zsvResponse.setSvBank();
@@ -185,16 +212,22 @@ public class ZSVEngine {
             zsvResponse.setAmountDeb(resultSet.getString(3));
             zsvResponse.setAmountCred(resultSet.getString(4));*/
 
-            responses.add(zsvResponse);
+                responses.add(zsvResponse);
+            }
+        } catch (SQLException eSQL) {
+            eSQL.printStackTrace();
+        } catch (ParseException eParse) {
+            eParse.printStackTrace();
+        } finally {
+            closeHiveConnection();
+            closeStatement(stmt);
+            return responses;
         }
 
-        closeHiveConnection();
-        closeStatement(stmt);
 
+        // @todo - а не надо ли закрывать запрос и/или соединение в блоке catch или finally? - DONE
 
-        // @todo - а не надо ли закрывать запрос и/или соединение в блоке catch или finally?
-
-        return answer;
+        //return responses;
     }
 
 }
