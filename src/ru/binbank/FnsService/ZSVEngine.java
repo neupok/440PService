@@ -207,32 +207,7 @@ public class ZSVEngine {
                 "  from 440_p.zsv_lines_parquet a" +
                 " inner join ( select * from 440_p.account where code in (";
 
-        // @todo - for (ZSVRequest r: requests)
-        for (Iterator itRequests = requests.iterator(); itRequests.hasNext(); ) {
-            ZSVRequest objectRequests = (ZSVRequest)itRequests.next();
-
-            for (Iterator itPoUkazannim = objectRequests.getZapnoVipis().getpoUkazannim().iterator(); itPoUkazannim.hasNext(); ) {
-                ZSVRequest.ZapnoVipis.poUkazannim objectPoUkazannim = (ZSVRequest.ZapnoVipis.poUkazannim)itPoUkazannim.next();
-                query = query + "'" + objectPoUkazannim.getNomSch() + "'";
-
-                if (itPoUkazannim.hasNext()) { query = query + ", "; }; //else { query = query + ")"; };
-            }
-
-            if (itRequests.hasNext()) { query = query + ", "; } else { query = query + ")"; };
-        }
-
-        /*
-        for (Iterator itRequests = requests.iterator(); itRequests.hasNext(); ) {
-            ZSVRequest objectRequests = (ZSVRequest)itRequests.next();
-
-            query = query.concat(objectRequests.getZapnoVipis().getpoUkazannim().stream().map(x -> "'" + x.getNomSch() + "'").collect(Collectors.joining(",")));
-
-        }
-        */
-
-
-
-
+        query = query.concat(requests.stream().map(x -> x.getZapnoVipis().getpoUkazannim().stream().map(y -> "'" + y.getNomSch() + "'").collect(Collectors.joining(","))).collect(Collectors.joining(",")));
 
         query = query + ") b" +
                 "   on a.idaccount = b.idacc and" +
