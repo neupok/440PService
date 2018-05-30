@@ -15,9 +15,9 @@ import org.apache.commons.lang.StringUtils;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 
-public class ZSVEngine {
-    // @todo - убрать static - DONE
+import javax.xml.datatype.DatatypeFactory;
 
+public class ZSVEngine {
     private String driverName = "org.apache.hive.jdbc.HiveDriver";
     private Connection hiveConnection;
     //private Statement stmt;
@@ -80,6 +80,7 @@ public class ZSVEngine {
         String query = "select inn, idclient from 440_p.inn where inn in ("
                 .concat(inns.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
                 .concat(") and idbank=").concat(idBank.toString());
+
 
         // Выполнение запроса
         Statement stmt = hiveConnection.createStatement();
@@ -212,44 +213,51 @@ public class ZSVEngine {
      */
     public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException, ClassNotFoundException {
 
-        // Формировапние текста запроса
-        // @todo - глагол! - DONE
-        String hiveQuery = getHiveQuery(requests);
-        System.out.println(hiveQuery); // kvd
-
-        // @todo - убрать hardcode, параметры передаются в конструктор - DONE
-        createHiveConnection();
-
-        // Выполнение запроса
-        Statement stmt = getStatement();
-        ResultSet resultSet = stmt.executeQuery(hiveQuery);
-
-        // Заполнение массива строками результата
         ArrayList<ZSVResponse> responses = new ArrayList<>();
-        SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-        // Группировка объектов по счетам
-        //java.util.Map<String, ZSVResponse.SvBank.Svedenia.Operacii> opersByAcc = new HashMap<String, ZSVResponse.SvBank.Svedenia.Operacii>();
-        Map opersByAcc = new HashMap<String, ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> >();
+        createHiveConnection();
+        Statement stmt = getStatement();
 
-        while (resultSet.next()) {
-            ZSVResponse zsvResponse = new ZSVResponse();
+        try {
+            // Формировапние текста запроса
+            String hiveQuery = getHiveQuery(requests);
+            System.out.println(hiveQuery); // kvd
 
-//            ZSVResponse.SvBank svBank = new ZSVResponse.SvBank();
-//            ZSVResponse.SvBank.Svedenia svedenia = new ZSVResponse.SvBank.Svedenia();
+            // Выполнение запроса
+            ResultSet resultSet = stmt.executeQuery(hiveQuery);
 
-            ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
+            // Заполнение массива строками результата
+            SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-            // a.dtoperdate
-            ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc rekvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
-            //rekvDoc.setDataDoc(formatResponse.parse(resultSet.getString(1)));
-            // Номер счета
-            String accountCode = resultSet.getString(2);
-            // a.amountdeb
-            ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
-            //summaOper.setDebet(resultSet.getString(3));
-            // a.amountcre
-            //summaOper.setDebet(resultSet.getString(4));
+            // Группировка объектов по счетам
+            Map opersByAcc = new HashMap<String, ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>>();
+
+            while (resultSet.next()) {
+                ZSVResponse zsvResponse = new ZSVResponse();
+
+                ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
+
+                // a.dtoperdate
+                ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc rekvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
+
+                GregorianCalendar dataDocGreg = new GregorianCalendar();
+                dataDocGreg.setTime(formatResponse.parse(resultSet.getString(1)));
+                javax.xml.datatype.XMLGregorianCalendar dataDocGregXML = DatatypeFactory.newInstance().newXMLGregorianCalendar(dataDocGreg);
+                rekvDoc.setDataDoc(dataDocGregXML);
+
+                // Номер счета
+                String accountCode = resultSet.getString(2);
+
+                // Суммы по операции
+                ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
+
+                // a.amountdeb
+                BigDecimal amountDebetBigDecimal = new BigDecimal(resultSet.getString(3));
+                summaOper.setDebet( amountDebetBigDecimal);
+
+                // a.amountcre
+                BigDecimal amountCreditBigDecimal = new BigDecimal(resultSet.getString(4));
+                summaOper.setCredit(amountCreditBigDecimal);
 
             // Сборка объекта
             operacii.setRekvDoc(rekvDoc);
@@ -269,16 +277,17 @@ public class ZSVEngine {
             zsvResponse.setAmountDeb(resultSet.getString(3));
             zsvResponse.setAmountCred(resultSet.getString(4));*/
 
-            responses.add(zsvResponse);
+                responses.add(zsvResponse);
+            }
+        } catch (SQLException eSQL) {
+            eSQL.printStackTrace();
+        } catch (ParseException eParse) {
+            eParse.printStackTrace();
+        } finally {
+            closeHiveConnection();
+            closeStatement(stmt);
+            return responses;
         }
 
-        closeHiveConnection();
-        closeStatement(stmt);
-
-
-        // @todo - а не надо ли закрывать запрос и/или соединение в блоке catch или finally?
-
-        //return answer;
-        return null;
     }
 }
