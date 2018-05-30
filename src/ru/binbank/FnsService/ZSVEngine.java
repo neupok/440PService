@@ -70,6 +70,15 @@ public class ZSVEngine {
         return result;
     }
 
+    /**
+     * Проверка, что ИНН существует в базе.
+     * @param inns
+     * @return
+     */
+    private Collection<String> selectExistingInn(Collection<String> inns, Long idBank) {
+
+    }
+
 
 
     public void closeHiveConnection() throws SQLException {
