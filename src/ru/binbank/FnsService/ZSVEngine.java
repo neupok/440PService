@@ -8,14 +8,12 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
-
-import javax.xml.datatype.DatatypeFactory;
-
-//import static ru.binbank.fnsservice.utils.Dictionary.CONNECT_STRING;
-
 
 public class ZSVEngine {
     // @todo - убрать static - DONE
@@ -24,35 +22,79 @@ public class ZSVEngine {
     private Connection hiveConnection;
     //private Statement stmt;
 
+    // Параметры подключения
     private String connectString;
     private String connectLogin;
     private String connectPassword;
 
-    // @todo - добавить конструктор класса, в который передаются параметры подключения - DONE
-
-    public ZSVEngine(String connectStr, String connectLog, String connectPass) {
-        this.connectString = connectStr;
-        this.connectLogin = connectLog;
-        this.connectPassword = connectPass;
+    public ZSVEngine(String connectString, String connectLogin, String connectPassword) {
+        this.connectString = connectString;
+        this.connectLogin = connectLogin;
+        this.connectPassword = connectPassword;
     }
 
+    public void createHiveConnection() throws SQLException, ClassNotFoundException {
+        Class.forName(driverName);
+        hiveConnection = DriverManager.getConnection(
+                connectString,     // строка соединения, например "jdbc:hive2://msk-hadoop01:10000/default"
+                connectLogin,
+                connectPassword
+        );
+    }
 
-    public void createHiveConnection() throws SQLException {
-        try {
-            Class.forName(driverName);
-// @todo - переработать
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            System.exit(1);
+    /**
+     * Поиск идентификаторов банков по их БИКам.
+     * @param bics
+     * @return
+     */
+    private Map<String, Long> selectBankIdByBIC(Collection<String> bics) throws SQLException {
+        // Формирование текста запроса
+        String query = "select idbank, bic from 440_p.bank where bic in ("
+                .concat(bics.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
+                .concat(");");
+
+        // Выполнение запроса
+        Statement stmt = hiveConnection.createStatement();
+        ResultSet resultSet = stmt.executeQuery(query);
+
+        // Разбор результата
+        HashMap<String, Long> result = new HashMap<String, Long>();
+
+        while (resultSet.next()) {
+            result.put(resultSet.getString("bic"), resultSet.getLong("idbank"));
         }
 
-        hiveConnection = DriverManager.getConnection(
-                connectString,     // строка соединения "jdbc:hive2://msk-hadoop01:10000/default"
-                connectLogin,      // логин "root"
-                connectPassword    // пароль "GoodPwd1234"
-        );
+        resultSet.close();
+        stmt.close();
+
+        return result;
+    }
+
+    /**
+     * Проверка, что ИНН существует в базе.
+     * @param inns
+     * @return
+     */
+    private Collection<String> selectExistingInn(Collection<String> inns, Long idBank) {
+        // Формирование текста запроса
+        String query = "select inn, idbank from 440_p.inn where inn in ("
+                .concat(inns.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
+                .concat(") and idbank = ".concat(String.valueOf(idBank)));
+
+        // Выполнение запроса
+        Statement stmt = hiveConnection.createStatement();
+        ResultSet resultSet = stmt.executeQuery(query);
+
+        // Разбор результата
+        HashMap<String, Long> result = new HashMap<String, Long>();
+
+        while (resultSet.next()) {
+            result.put(resultSet.getString("bic"), resultSet.getLong("idbank"));
+        }
+
 
     }
+
 
 
     public void closeHiveConnection() throws SQLException {
@@ -61,20 +103,12 @@ public class ZSVEngine {
 
 
     public Statement getStatement() throws SQLException {
-        try {
-            return hiveConnection.createStatement();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        return hiveConnection.createStatement();
     }
 
 
-    public void closeStatement(Statement statement) {
-        try {
-            statement.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    public void closeStatement(Statement statement) throws SQLException {
+        statement.close();
     }
 
 
@@ -136,7 +170,7 @@ public class ZSVEngine {
      * @param requests
      * @throws SQLException
      */
-    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException {
+    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException, ClassNotFoundException {
 
         ArrayList<ZSVResponse> responses = new ArrayList<>();
 
@@ -194,15 +228,15 @@ public class ZSVEngine {
                 BigDecimal amountCreditBigDecimal = new BigDecimal(resultSet.getString(4));
                 summaOper.setCredit(amountCreditBigDecimal);
 
-                // Сборка объекта
-                operacii.setRekvDoc(rekvDoc);
-                operacii.setSummaOper(summaOper);
+            // Сборка объекта
+            operacii.setRekvDoc(rekvDoc);
+            operacii.setSummaOper(summaOper);
 
-                // Сохранение в разрезе счета
-                if (!opersByAcc.containsKey(accountCode))
-                    opersByAcc.put(accountCode, new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>());
+            // Сохранение в разрезе счета
+            if (!opersByAcc.containsKey(accountCode))
+                opersByAcc.put(accountCode, new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>());
 
-                ((ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>) opersByAcc.get(accountCode)).add(operacii);
+            ((ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>)opersByAcc.get(accountCode)).add(operacii);
 
             /*
             zsvResponse.setSvBank();
