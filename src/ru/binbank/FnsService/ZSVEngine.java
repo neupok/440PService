@@ -16,8 +16,6 @@ import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 
 public class ZSVEngine {
-    // @todo - убрать static - DONE
-
     private String driverName = "org.apache.hive.jdbc.HiveDriver";
     private Connection hiveConnection;
     //private Statement stmt;
@@ -179,30 +177,20 @@ public class ZSVEngine {
 
         try {
             // Формировапние текста запроса
-            // @todo - глагол! - DONE
             String hiveQuery = getHiveQuery(requests);
             System.out.println(hiveQuery); // kvd
 
-            // @todo - убрать hardcode, параметры передаются в конструктор - DONE
-            //createHiveConnection();
-
             // Выполнение запроса
-            //Statement stmt = getStatement();
             ResultSet resultSet = stmt.executeQuery(hiveQuery);
 
             // Заполнение массива строками результата
-            //ArrayList<ZSVResponse> responses = new ArrayList<>();
             SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
             // Группировка объектов по счетам
-            //java.util.Map<String, ZSVResponse.SvBank.Svedenia.Operacii> opersByAcc = new HashMap<String, ZSVResponse.SvBank.Svedenia.Operacii>();
             Map opersByAcc = new HashMap<String, ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>>();
 
             while (resultSet.next()) {
                 ZSVResponse zsvResponse = new ZSVResponse();
-
-//            ZSVResponse.SvBank svBank = new ZSVResponse.SvBank();
-//            ZSVResponse.SvBank.Svedenia svedenia = new ZSVResponse.SvBank.Svedenia();
 
                 ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
 
@@ -258,10 +246,6 @@ public class ZSVEngine {
             return responses;
         }
 
-
-        // @todo - а не надо ли закрывать запрос и/или соединение в блоке catch или finally? - DONE
-
-        //return responses;
     }
 
 }
