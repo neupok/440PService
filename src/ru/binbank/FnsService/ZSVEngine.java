@@ -8,12 +8,12 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
-
-import static ru.binbank.fnsservice.utils.Dictionary.CONNECT_STRING;
-
 
 public class ZSVEngine {
     // @todo - убрать static - DONE
@@ -22,35 +22,54 @@ public class ZSVEngine {
     private Connection hiveConnection;
     //private Statement stmt;
 
+    // Параметры подключения
     private String connectString;
     private String connectLogin;
     private String connectPassword;
 
-    // @todo - добавить конструктор класса, в который передаются параметры подключения - DONE
-
-    ZSVEngine(String connectStr, String connectLog, String connectPass) {
-        this.connectString = connectStr;
-        this.connectLogin = connectLog;
-        this.connectPassword = connectPass;
+    public ZSVEngine(String connectString, String connectLogin, String connectPassword) {
+        this.connectString = connectString;
+        this.connectLogin = connectLogin;
+        this.connectPassword = connectPassword;
     }
 
+    public void createHiveConnection() throws SQLException, ClassNotFoundException {
+        Class.forName(driverName);
+        hiveConnection = DriverManager.getConnection(
+                connectString,     // строка соединения, например "jdbc:hive2://msk-hadoop01:10000/default"
+                connectLogin,
+                connectPassword
+        );
+    }
 
-    public void createHiveConnection() throws SQLException {
-        try {
-            Class.forName(driverName);
-// @todo - переработать
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            System.exit(1);
+    /**
+     * Поиск идентификаторов банков по их БИКам.
+     * @param bics
+     * @return
+     */
+    private Map<String, Long> selectBankIdByBIC(Collection<String> bics) throws SQLException {
+        // Формирование текста запроса
+        String query = "select idbank, bic from 440_p.bank where bic in ("
+                .concat(bics.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
+                .concat(");");
+
+        // Выполнение запроса
+        Statement stmt = hiveConnection.createStatement();
+        ResultSet resultSet = stmt.executeQuery(query);
+
+        // Разбор результата
+        HashMap<String, Long> result = new HashMap<String, Long>();
+
+        while (resultSet.next()) {
+            result.put(resultSet.getString("bic"), resultSet.getLong("idbank"));
         }
 
-        hiveConnection = DriverManager.getConnection(
-                connectString,     // строка соединения "jdbc:hive2://msk-hadoop01:10000/default"
-                connectLogin,      // логин "root"
-                connectPassword    // пароль "GoodPwd1234"
-        );
+        resultSet.close();
+        stmt.close();
 
+        return result;
     }
+
 
 
     public void closeHiveConnection() throws SQLException {
@@ -58,12 +77,12 @@ public class ZSVEngine {
     }
 
 
-    public Statement getStatement() {
+    public Statement getStatement() throws SQLException {
         return hiveConnection.createStatement();
     }
 
 
-    public void closeStatement(Statement statement) {
+    public void closeStatement(Statement statement) throws SQLException {
         statement.close();
     }
 
@@ -126,7 +145,7 @@ public class ZSVEngine {
      * @param requests
      * @throws SQLException
      */
-    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException {
+    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException, ClassNotFoundException {
 
         // Формировапние текста запроса
         // @todo - глагол! - DONE
@@ -158,14 +177,14 @@ public class ZSVEngine {
 
             // a.dtoperdate
             ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc rekvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
-            rekvDoc.setDataDoc(formatResponse.parse(resultSet.getString(1)));
+            //rekvDoc.setDataDoc(formatResponse.parse(resultSet.getString(1)));
             // Номер счета
             String accountCode = resultSet.getString(2);
             // a.amountdeb
             ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
-            summaOper.setDebet(resultSet.getString(3));
+            //summaOper.setDebet(resultSet.getString(3));
             // a.amountcre
-            summaOper.setDebet(resultSet.getString(4));
+            //summaOper.setDebet(resultSet.getString(4));
 
             // Сборка объекта
             operacii.setRekvDoc(rekvDoc);
@@ -194,7 +213,8 @@ public class ZSVEngine {
 
         // @todo - а не надо ли закрывать запрос и/или соединение в блоке catch или finally?
 
-        return answer;
+        //return answer;
+        return null;
     }
 
 }

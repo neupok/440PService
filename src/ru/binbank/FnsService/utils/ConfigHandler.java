@@ -73,7 +73,7 @@ public class ConfigHandler {
     /**
      * Настройки hive
      */
-    private class HiveConfig {
+    public class HiveConfig {
         public String connString;
         public String login;
         public String password;

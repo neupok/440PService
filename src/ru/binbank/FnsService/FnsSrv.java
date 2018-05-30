@@ -32,13 +32,17 @@ public class FnsSrv {
         Collection<ZSVRequest> requests = requestConnector.fetchRequests();
 
         // Получение ответов
-        ru.binbank.fnsservice.ZSVEngine zsvEngine = new ru.binbank.fnsservice.ZSVEngine();
+        ru.binbank.fnsservice.ZSVEngine zsvEngine = new ru.binbank.fnsservice.ZSVEngine(configHandler.getHiveConfig().connString,
+                configHandler.getHiveConfig().login,
+                configHandler.getHiveConfig().password);
         Collection<ZSVResponse> zsvResponses = null;
         try {
             zsvResponses = zsvEngine.getResult(requests);
         } catch (SQLException e) {
             e.printStackTrace();
         } catch (ParseException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
 
