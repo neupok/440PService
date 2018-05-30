@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="windows-1251"?>
 <FnsService>
-    <!-- Настрок-->
+    <!-- Настройки обработки -->
     <process>
         <!-- Максимальное количество обрабатываемых за один раз запросов -->
         <batch_size>100</batch_size>
@@ -11,6 +11,12 @@
         <!-- Пароль подключения -->
         <connect_password>"GoodPwd1234"</connect_password>
     </process>
+
+    <hive>
+        <connection_string></connection_string>
+        <login></login>
+        <password></password>
+    </hive>
 
 <!-- Дальше только для примера -->
 

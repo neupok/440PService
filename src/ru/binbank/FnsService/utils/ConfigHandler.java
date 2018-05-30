@@ -22,6 +22,28 @@ public class ConfigHandler {
      */
     private int batchSize;
 
+    public String getInputDir() {
+        return inputDir;
+    }
+
+    public void setInputDir(String inputDir) {
+        this.inputDir = inputDir;
+    }
+
+    /**
+     * Директория со входящими запросами.
+     */
+    private String inputDir;
+
+    public HiveConfig getHiveConfig() {
+        return hiveConfig;
+    }
+
+    /**
+     * Настройки hive
+     */
+    private HiveConfig hiveConfig;
+
     /**
      * Класс работы с конфигом
      */
@@ -40,7 +62,21 @@ public class ConfigHandler {
 
         // Чтение параметров
         setBatchSize(Integer.parseInt(xmlConfig.getString("process." + Dictionary.BATCH_SIZE)));
+        setInputDir(xmlConfig.getString("process." + Dictionary.INPUT_DIR));
+        // hive
+        HiveConfig hiveConfig = new HiveConfig();
+        hiveConfig.connString = xmlConfig.getString("hive.connection_string");
+        hiveConfig.login = xmlConfig.getString("hive.login");
+        hiveConfig.password = xmlConfig.getString("hive.password");
+    }
 
+    /**
+     * Настройки hive
+     */
+    private class HiveConfig {
+        public String connString;
+        public String login;
+        public String password;
     }
 }
 

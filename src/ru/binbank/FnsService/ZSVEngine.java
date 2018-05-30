@@ -1,6 +1,7 @@
 package ru.binbank.fnsservice;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.text.ParseException;
@@ -143,13 +144,46 @@ public class ZSVEngine {
         ArrayList<ZSVResponse> responses = new ArrayList<>();
         SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+        // Группировка объектов по счетам
+        //java.util.Map<String, ZSVResponse.SvBank.Svedenia.Operacii> opersByAcc = new HashMap<String, ZSVResponse.SvBank.Svedenia.Operacii>();
+        Map opersByAcc = new HashMap<String, ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> >();
+
         while (resultSet.next()) {
             ZSVResponse zsvResponse = new ZSVResponse();
 
+//            ZSVResponse.SvBank svBank = new ZSVResponse.SvBank();
+//            ZSVResponse.SvBank.Svedenia svedenia = new ZSVResponse.SvBank.Svedenia();
+
+            ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
+
+            // a.dtoperdate
+            ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc rekvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
+            rekvDoc.setDataDoc(formatResponse.parse(resultSet.getString(1)));
+            // Номер счета
+            String accountCode = resultSet.getString(2);
+            // a.amountdeb
+            ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
+            summaOper.setDebet(resultSet.getString(3));
+            // a.amountcre
+            summaOper.setDebet(resultSet.getString(4));
+
+            // Сборка объекта
+            operacii.setRekvDoc(rekvDoc);
+            operacii.setSummaOper(summaOper);
+
+            // Сохранение в разрезе счета
+            if (!opersByAcc.containsKey(accountCode))
+                opersByAcc.put(accountCode, new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>());
+
+            ((ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>)opersByAcc.get(accountCode)).add(operacii);
+
+            /*
+            zsvResponse.setSvBank();
+
             zsvResponse.setOperdate(formatResponse.parse(resultSet.getString(1)));
-            zsvResponse.setCode(resultSet.getString(2));
+            zsvResponse.s .setCode(resultSet.getString(2));
             zsvResponse.setAmountDeb(resultSet.getString(3));
-            zsvResponse.setAmountCred(resultSet.getString(4));
+            zsvResponse.setAmountCred(resultSet.getString(4));*/
 
             responses.add(zsvResponse);
         }

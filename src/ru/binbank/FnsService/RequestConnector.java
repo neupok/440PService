@@ -21,7 +21,6 @@ public class RequestConnector {
      */
     public RequestConnector(int batchSize) {
         this.batchSize = batchSize;
-
     }
 
     public Collection<ZSVRequest> fetchRequests() {
