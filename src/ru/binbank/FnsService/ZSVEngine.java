@@ -169,7 +169,6 @@ public class ZSVEngine {
         hiveConnection.close();
     }
 
-
     public Statement getStatement() throws SQLException {
         return hiveConnection.createStatement();
     }
