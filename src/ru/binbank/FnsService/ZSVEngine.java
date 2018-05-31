@@ -278,6 +278,7 @@ public class ZSVEngine {
         }
         Date minDate = datesFrom.stream().min(Date::compareTo).get();
         Date maxDate = datesFrom.stream().max(Date::compareTo).get();
+
         Map<String, Map<String, Object> > rest = selectRest(idAccs, minDate, maxDate, idBank);
 
         // TODO: 30.05.2018 Запрос операций
