@@ -7,7 +7,7 @@
     </process>
 
     <hive>
-        <connection_string>jdbc:hive2://msk-hadoop01:10000/default</connection_string>
+        <connection_string>jdbc:hive2://msk-hadoop01:10000/440_p</connection_string>
         <login>hadoop</login>
         <password>HDPwd12345</password>
     </hive>

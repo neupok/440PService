@@ -143,7 +143,7 @@ public class ZSVEngine {
         String stringMaxdate = format.format(maxDate);
 
         // Формирование текста запроса
-        String query = "select amount, idaccount, dt from 440_p.rest where idaccount in ("
+        String query = "select amount, idaccount, dt from rest where idaccount in ("
                 .concat(idAccs.stream().map(n -> n.toString()).collect(Collectors.joining(","))) // quote
                 .concat(") and idbank=").concat(idBank.toString())
                 .concat(" and dt between cast('").concat(stringMindate).concat("' as date)")
@@ -315,18 +315,32 @@ public class ZSVEngine {
         Map<String, Map<String, Object> > accounts = selectAccounts(accCodes, allAccsClients, idBank);
 
         // Запрос остатков
+        // Сбор всех запрашиваемых счетов в список
         LinkedList<Long> idAccs = new LinkedList<>();
         for (Map<String, Object> val: accounts.values()) {
             idAccs.add((Long) val.get("idacc"));
         }
+        // Определение минимальной и максимальной дат
+        LinkedList<Date> datesFrom = new LinkedList<>();
+        LinkedList<Date> datesTo = new LinkedList<>();
+        for (ZSVRequest r: requests) {
+            ZSVRequest.ZapnoVipis.ZaPeriod zaPeriod = r.getZapnoVipis().getzaPeriod();
+            datesFrom.add(zaPeriod.getDateBeg().toGregorianCalendar().getTime());
+            datesTo.add(zaPeriod.getDateEnd().toGregorianCalendar().getTime());
+        }
+        Date minDate = datesFrom.stream().min(Date::compareTo).get();
+        Date maxDate = datesFrom.stream().max(Date::compareTo).get();
 
-        // @todo: изменить вызов selectRest:
-        //Collection<Map<String, Object> > rest = selectRest(idAccs, idBank);
-
-        // @todo: нужно составить коллекцию объектов следующей структуры:
-        //
+        Map<String, Map<String, Object> > rest = selectRest(idAccs, minDate, maxDate, idBank);
 
         // TODO: 30.05.2018 Запрос операций
+
+
+        // Все, что ниже - старое
+
+
+        ArrayList<ZSVResponse> responses = new ArrayList<>();
+
         createHiveConnection();
         //Statement stmt = getStatement();
 
@@ -346,7 +360,6 @@ public class ZSVEngine {
 
             while (resultSet.next()) {
                 ZSVResponse zsvResponse = new ZSVResponse();
-
 
                 ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
 
