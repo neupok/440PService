@@ -592,7 +592,7 @@ public class ZSVRequest {
         @XmlElement(name = "\u0421\u0432\u041d\u041e", required = true)
         protected SvNoType svNo;
         @XmlElement(name = "\u0421\u0432\u0411\u0430\u043d\u043a")
-        protected BankType svBank;
+        protected ru.binbank.fnsservice.contracts.BankType svBank;
         @XmlElement(name = "\u0421\u0432\u0423\u0411\u0420")
         protected UbrType svUBR;
         @XmlElement(name = "\u0421\u0432\u041f\u043b", required = true)

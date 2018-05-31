@@ -34,6 +34,10 @@ public class ZSVEngine {
         this.connectPassword = connectPassword;
     }
 
+    private class RequestsParams {
+        public String nomZapr;
+    }
+
     public void createHiveConnection() throws SQLException, ClassNotFoundException {
         Class.forName(driverName);
         hiveConnection = DriverManager.getConnection(
@@ -185,43 +189,79 @@ public class ZSVEngine {
 
 
     /**
-     * Формирование текста запроса
+     * Формирование текста запроса по операциям
      * @param requests
      * @throws SQLException
      */
-    public String getHiveQuery(Collection<ZSVRequest> requests) {
+    public ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> String selectOperacii(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) {
 
-        // Определяем временной интервал
-        ArrayList<Date> alldates = new ArrayList<Date>();
-
-        for (ZSVRequest r: requests) {
-            alldates.add(r.getZapnoVipis().getzaPeriod().getDateBeg().toGregorianCalendar().getTime());
-            alldates.add(r.getZapnoVipis().getzaPeriod().getDateEnd().toGregorianCalendar().getTime());
-        }
-
-        Date mindate = Collections.min(alldates);
-        Date maxdate = Collections.max(alldates);
+        ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> allOperacii = new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>();
 
         // Форматируем даты
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-        String stringMindate = format.format(mindate);
-        String stringMaxdate = format.format(maxdate);
+        String stringMindate = format.format(minDate);
+        String stringMaxdate = format.format(maxDate);
 
-        // Формируем общий запрос
-        String query = "select a.dtoperdate, b.code, a.amountdeb, a.amountcre" +
-                "  from 440_p.zsv_lines_parquet a" +
-                " inner join ( select * from 440_p.account where code in (";
+        // Формирование текста запроса
+        String query = "select description, viddoc, dtoperdate, docnum, docnum, corraccnum, paybankname,"
+                .concat("      paybankbik, clientlabel, clientinn, clientkpp, clientaccnum, amountdeb, amountcre")
+                .concat(" from zsv_lines_parquet ")
+                .concat("where idaccount in (")
+                .concat(idAccs.stream().map(x -> "'" + x + "'").collect(Collectors.joining(",")));
 
-        query = query.concat(requests.stream().map(x -> x.getZapnoVipis().getpoUkazannim().stream().map(y -> "'" + y.getNomSch() + "'").collect(Collectors.joining(","))).collect(Collectors.joining(",")));
+        // Выполнение запроса
+        Statement stmt = hiveConnection.createStatement();
+        ResultSet resultSet = stmt.executeQuery(query);
 
-        query = query + ") b" +
-                "   on a.idaccount = b.idacc and" +
-                "      a.idbank = b.idbank " +
-                "where a.dtoperdate between cast ('" + stringMindate + "' as date) and cast ('" + stringMaxdate + "' as date)";
+        // Разбор результата
+        HashMap<String, Map<String, Object> > result = new HashMap<>();
 
-        System.out.println(query); // kvd
+        while (resultSet.next()) {
+            ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
 
-        return query;
+            ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc recvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
+            recvDoc.setBidDoc(resultSet.getString("viddoc"));
+            recvDoc.setNomDoc(resultSet.getString("docnum"));
+            recvDoc.getDataDoc(resultSet.getDate("dtoperdate"));
+
+            ZSVResponse.SvBank.Svedenia.Operacii.RekvBank recvBank = new ZSVResponse.SvBank.Svedenia.Operacii.RekvBank();
+            recvBank.setNomKorSch(resultSet.getString("corraccnum"));
+            recvBank.setNaimBP(resultSet.getString("paybankname"));
+            recvBank.getBIKBP(resultSet.getString("paybankbik"));
+
+            ZSVResponse.SvBank.Svedenia.Operacii.RekvPlat recvPlat = new ZSVResponse.SvBank.Svedenia.Operacii.RekvPlat();
+            recvPlat.setNaimPP(resultSet.getString("clientlabel"));
+            recvPlat.setINNPP(resultSet.getString("clientinn"));
+            recvPlat.setKPPPP(resultSet.getString("clientkpp"));
+            recvPlat.setNomSchPP(resultSet.getString("clientaccnum"));
+
+            ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
+            summaOper.setDebet(resultSet.getString("amountdeb"));
+            summaOper.setCredit(resultSet.getString("amountcre"));
+
+            operacii.setRekvDoc(recvDoc);
+            operacii.setRekvBank(recvBank);
+            operacii.setRekvPlat(recvPlat);
+            operacii.setSummaOper(summaOper);
+
+            allOperacii.add(operacii);
+
+            HashMap<String, Object> rowMap = new HashMap<>();
+
+
+            HashMap<String, Object> rowMap = new HashMap<>();
+            // Заполняем значениями атрибутов
+            rowMap.put("dt", resultSet.getDate("dt"));
+            rowMap.put("amount", resultSet.getLong("amount"));
+
+            result.put(resultSet.getString("idaccount"), rowMap);
+        }
+
+        resultSet.close();
+        stmt.close();
+
+        return result;
+
     }
 
 
@@ -231,6 +271,10 @@ public class ZSVEngine {
      * @throws SQLException
      */
     public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException, ClassNotFoundException {
+
+        // Коллекция, в которую будем записывать ответы
+        ArrayList<ZSVResponse> responses = new ArrayList<>();
+
         // Определение идентификаторов банков
         LinkedList<String> bics = new LinkedList<>();
         for (ZSVRequest r: requests) {
@@ -239,6 +283,13 @@ public class ZSVEngine {
         Map<String, Long> banks = selectBankIdByBIC(bics);
 
         // TODO: 30.05.2018 сделать проверки и правильную начитку банка
+        // Идентификаторы банков (т.е. филиалов) записываем в отдельную коллекцию.
+        // Понадобится, если в запросе по операциям юудем отбирать в разрезе филиалов.
+        LinkedList<Long> idBanks = new LinkedList<>();
+        for (Long val: banks.values()) {
+            idBanks.add(val);
+        }
+
         Long idBank = new Long(1);
 
         // Поиск клиентов
@@ -270,23 +321,22 @@ public class ZSVEngine {
         }
 
         // @todo: изменить вызов selectRest:
-        Collection<Map<String, Object> > rest = selectRest(idAccs, idBank);
+        //Collection<Map<String, Object> > rest = selectRest(idAccs, idBank);
+
+        // @todo: нужно составить коллекцию объектов следующей структуры:
+        //
 
         // TODO: 30.05.2018 Запрос операций
-
-
-        ArrayList<ZSVResponse> responses = new ArrayList<>();
-
         createHiveConnection();
-        Statement stmt = getStatement();
+        //Statement stmt = getStatement();
 
         try {
             // Формировапние текста запроса
-            String hiveQuery = getHiveQuery(requests);
-            System.out.println(hiveQuery); // kvd
+            String resultSet = selectOperacii(idAccs);
 
-            // Выполнение запроса
-            ResultSet resultSet = stmt.executeQuery(hiveQuery);
+
+            // Выполнение запроса по операциям
+            //ResultSet resultSet = stmt.executeQuery(hiveQuery);
 
             // Заполнение массива строками результата
             SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -296,6 +346,7 @@ public class ZSVEngine {
 
             while (resultSet.next()) {
                 ZSVResponse zsvResponse = new ZSVResponse();
+
 
                 ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
 
