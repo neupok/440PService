@@ -263,15 +263,27 @@ public class ZSVEngine {
         Map<String, Map<String, Object> > accounts = selectAccounts(accCodes, allAccsClients, idBank);
 
         // Запрос остатков
+        // Сбор всех запрашиваемых счетов в список
         LinkedList<Long> idAccs = new LinkedList<>();
         for (Map<String, Object> val: accounts.values()) {
             idAccs.add((Long) val.get("idacc"));
         }
-
-        // @todo: изменить вызов selectRest:
-        Collection<Map<String, Object> > rest = selectRest(idAccs, idBank);
+        // Определение минимальной и максимальной дат
+        LinkedList<Date> datesFrom = new LinkedList<>();
+        LinkedList<Date> datesTo = new LinkedList<>();
+        for (ZSVRequest r: requests) {
+            ZSVRequest.ZapnoVipis.ZaPeriod zaPeriod = r.getZapnoVipis().getzaPeriod();
+            datesFrom.add(zaPeriod.getDateBeg().toGregorianCalendar().getTime());
+            datesTo.add(zaPeriod.getDateEnd().toGregorianCalendar().getTime());
+        }
+        Date minDate = datesFrom.stream().min(Date::compareTo).get();
+        Date maxDate = datesFrom.stream().max(Date::compareTo).get();
+        Map<String, Map<String, Object> > rest = selectRest(idAccs, minDate, maxDate, idBank);
 
         // TODO: 30.05.2018 Запрос операций
+
+
+        // Все, что ниже - старое
 
 
         ArrayList<ZSVResponse> responses = new ArrayList<>();
