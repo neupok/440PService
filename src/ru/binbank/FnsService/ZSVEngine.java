@@ -132,29 +132,33 @@ public class ZSVEngine {
         return result;
     }
 
-    private Collection<Map<String, Object> > selectRest(Collection<Long> idAccs, /*minDate, maxDate,*/ Long idBank) throws SQLException {
+    private  Map<String, Map<String, Object> > selectRest(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
+        // Форматируем даты
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        String stringMindate = format.format(minDate);
+        String stringMaxdate = format.format(maxDate);
+
         // Формирование текста запроса
         String query = "select amount, idaccount, dt from 440_p.rest where idaccount in ("
                 .concat(idAccs.stream().map(n -> n.toString()).collect(Collectors.joining(","))) // quote
-                .concat(") and idbank=").concat(idBank.toString());
+                .concat(") and idbank=").concat(idBank.toString())
+                .concat(" and dt between cast('").concat(stringMindate).concat("' as date)")
+                .concat(" and cast('").concat(stringMaxdate).concat("' as date)");
 
         // Выполнение запроса
         Statement stmt = hiveConnection.createStatement();
         ResultSet resultSet = stmt.executeQuery(query);
 
         // Разбор результата
-        ArrayList<Map<String, Object> > result = new ArrayList<>();
+        HashMap<String, Map<String, Object> > result = new HashMap<>();
 
         while (resultSet.next()) {
             HashMap<String, Object> rowMap = new HashMap<>();
             // Заполняем значениями атрибутов
-            rowMap.put("idaccount", resultSet.getLong("idaccount"));
             rowMap.put("dt", resultSet.getDate("dt"));
+            rowMap.put("amount", resultSet.getLong("amount"));
 
-            HashMap<String, Object> rowMapAmount = new HashMap<>();
-            rowMapAmount.put(resultSet.getString("amount"), rowMap);
-
-            result.add(rowMapAmount);
+            result.put(resultSet.getString("idaccount"), rowMap);
         }
 
         resultSet.close();
@@ -263,6 +267,8 @@ public class ZSVEngine {
         for (Map<String, Object> val: accounts.values()) {
             idAccs.add((Long) val.get("idacc"));
         }
+
+        // @todo: изменить вызов selectRest:
         Collection<Map<String, Object> > rest = selectRest(idAccs, idBank);
 
         // TODO: 30.05.2018 Запрос операций
