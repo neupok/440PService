@@ -139,7 +139,7 @@ public class ZSVEngine {
         String stringMaxdate = format.format(maxDate);
 
         // Формирование текста запроса
-        String query = "select amount, idaccount, dt from 440_p.rest where idaccount in ("
+        String query = "select amount, idaccount, dt from rest where idaccount in ("
                 .concat(idAccs.stream().map(n -> n.toString()).collect(Collectors.joining(","))) // quote
                 .concat(") and idbank=").concat(idBank.toString())
                 .concat(" and dt between cast('").concat(stringMindate).concat("' as date)")
@@ -208,8 +208,8 @@ public class ZSVEngine {
 
         // Формируем общий запрос
         String query = "select a.dtoperdate, b.code, a.amountdeb, a.amountcre" +
-                "  from 440_p.zsv_lines_parquet a" +
-                " inner join ( select * from 440_p.account where code in (";
+                "  from zsv_lines_parquet a" +
+                " inner join ( select * from account where code in (";
 
         query = query.concat(requests.stream().map(x -> x.getZapnoVipis().getpoUkazannim().stream().map(y -> "'" + y.getNomSch() + "'").collect(Collectors.joining(","))).collect(Collectors.joining(",")));
 
