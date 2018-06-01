@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
+import ru.binbank.fnsservice.contracts.BankType;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 import sun.awt.image.ImageWatched;
@@ -493,6 +494,8 @@ public class ZSVEngine {
             for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
                 if (!accs.containsKey(poUkazannim.getNomSch())) {
                     ZSVResponse.SvBank.Svedenia svedenia = new ZSVResponse.SvBank.Svedenia();
+                    svedenia.setNomSch(poUkazannim.getNomSch());
+
                     ZSVResponse.SvBank.Svedenia.Result result = new ZSVResponse.SvBank.Svedenia.Result();
                     result.setKodResProverki("42");
                     svedenia.getResult().add(result);
@@ -501,31 +504,24 @@ public class ZSVEngine {
                     svedList.add(svedenia);
                 }
             }
-            
-            
-           /*
-            // Отбираем остатки
-            HashMap<String, Map<String, Object> > rest = new HashMap<>();
-            // Цикл по счетам
-            for (Map.Entry<String, Map<String, Object>> val : accs.entrySet()) {
-                // Определим идентификатор счета
-                Long accId = (Long) val.getValue().get("idacc");
-                // Поиск остатков
-                for (:
-                     ) {
-                    
-                }
-            }
-            
-            
-            
-            for (Map.Entry<Long, Map<String, Object> > val: rests.entrySet()) {
-                Long accId = val
 
-                if (accs.keySet().contains(val.getKey())
+            // Для каждого сведения создается отдельный ответ
+            int i = 0; // счетчик сведений
+            for (ZSVResponse.SvBank.Svedenia svedenia: svedList) {
+                ZSVResponse response = new ZSVResponse();
+                ZSVResponse.SvBank svBank = new ZSVResponse.SvBank();
+                // Копирование атрибутов банка из запроса
+                copyBankAttr(svBank, r.getZapnoVipis().getsvBank());
+                response.setSvBank(svBank);
+                // Нумерация
+                response.setChast(BigInteger.valueOf(i));
+                response.setIs(BigInteger.valueOf(svedList.size()));
+
+                svBank.setSvedenia(svedenia);
+                ++i;
             }
 
-            Map<Long, Map<String, Object> > rest*/
+
         }
     }
 
@@ -555,5 +551,14 @@ public class ZSVEngine {
         Date dateKon;
         BigDecimal ostatokNach;
         BigDecimal ostatokKon;
+    }
+
+    public void copyBankAttr(ZSVResponse.SvBank svBank, BankType bankFrom) {
+        svBank.setRegNom(bankFrom.getRegNom());
+        svBank.setNaimBank(bankFrom.getNaim());
+        svBank.setKPPBank(bankFrom.getKPPBank());
+        svBank.setINNBank(bankFrom.getINNBank());
+        svBank.setNomFil(bankFrom.getNomFil());
+        svBank.setBIK(bankFrom.getBIK());
     }
 }
