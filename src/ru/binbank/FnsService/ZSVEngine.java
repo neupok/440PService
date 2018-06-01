@@ -193,7 +193,7 @@ public class ZSVEngine {
      * @param requests
      * @throws SQLException
      */
-    public ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> String selectOperacii(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) {
+    public List<ZSVResponse.SvBank.Svedenia.Operacii> String selectOperacii(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) {
 
         ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> allOperacii = new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>();
 
