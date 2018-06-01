@@ -132,7 +132,7 @@ public class ZSVEngine {
         return result;
     }
 
-    private  Map<String, Map<String, Object> > selectRest(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
+    private  Map<Long, Map<String, Object> > selectRest(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
         // Форматируем даты
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
         String stringMindate = format.format(minDate);
@@ -153,12 +153,12 @@ public class ZSVEngine {
         HashMap<String, Map<String, Object> > result = new HashMap<>();
 
         while (resultSet.next()) {
-            HashMap<String, Object> rowMap = new HashMap<>();
+            HashMap<Long, Object> rowMap = new HashMap<>();
             // Заполняем значениями атрибутов
             rowMap.put("dt", resultSet.getDate("dt"));
             rowMap.put("amount", resultSet.getLong("amount"));
 
-            result.put(resultSet.getString("idaccount"), rowMap);
+            result.put(resultSet.getLong("idaccount"), rowMap);
         }
 
         resultSet.close();
@@ -230,37 +230,86 @@ public class ZSVEngine {
      * @throws SQLException
      */
     public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException, ClassNotFoundException {
+        // Соответствие запросов и ответов
+        HashMap<ZSVRequest, List<ZSVResponse> > respMap = new HashMap<>();
+        // Для каждого запроса создать пустой список ответов
+        for (ZSVRequest r: requests)
+            respMap.put(r, new LinkedList<>());
+
+        // Запросы, по которым еще не сформирован ответ
+        Iterable<ZSVRequest> requestsToProcess;
+
         // Определение идентификаторов банков
         LinkedList<String> bics = new LinkedList<>();
         for (ZSVRequest r: requests) {
             bics.add(r.getZapnoVipis().getsvBank().getBIK());
         }
         Map<String, Long> banks = selectBankIdByBIC(bics);
+        // Проверка, что банки найдены
+        for (ZSVRequest r: requests) {
+            if (!banks.containsKey(r.getZapnoVipis().getsvBank().getBIK()))
+            {
+                // Формирование ответа об отсутствии банка
+                ZSVResponse response = new ZSVResponse();
+                // TODO: 01.06.2018 формирование ответа с ошибкой    
+                respMap.get(r).add(response);
+            }
+        }
+        // Запросы, по которым уже есть ответы, не обрабатываем
+        requestsToProcess = requests.stream().filter(zsvRequest -> respMap.get(zsvRequest).isEmpty()).collect(Collectors.toList());
 
-        // TODO: 30.05.2018 сделать проверки и правильную начитку банка
-        Long idBank = new Long(1);
+        // TODO: 30.05.2018 сделать правильную начитку банка
+        Long idBank = (Long) banks.values().toArray()[0];
 
         // Поиск клиентов
         LinkedList<String> inns = new LinkedList<>();
-        for (ZSVRequest r: requests) {
+        // Обрабатываются только запросы, по которым еще нет ответа
+        for (ZSVRequest r: requestsToProcess) {
             inns.add(r.getZapnoVipis().getSvPl().getPlUl().getINNUL());
         }
         Map<String, Long> existingInns = selectExistingInn(inns, idBank);
+        // Разбор найденных клиентов
+        for (ZSVRequest r: requestsToProcess) {
+            if (!existingInns.containsKey(r.getZapnoVipis().getSvPl().getPlUl().getINNUL())) {
+                // Формирование ответа об отсутствии клиента
+                ZSVResponse response = new ZSVResponse();
+                // TODO: 01.06.2018 формирование ответа с ошибкой
+                respMap.get(r).add(response);
+            }
+        }
+        // Запросы, по которым уже есть ответы, не обрабатываем
+        requestsToProcess = requests.stream().filter(zsvRequest -> respMap.get(zsvRequest).isEmpty()).collect(Collectors.toList());
+
         // Клиентов, по которым пришел запрос по всем счетам, выделяем в отдельный список
         LinkedList<Long> allAccsClients = new LinkedList<>();
-        for (ZSVRequest r: requests) {
+        for (ZSVRequest r: requestsToProcess) {
             if (r.getZapnoVipis().getpoVsem() != null)
                 allAccsClients.add(existingInns.get(r.getZapnoVipis().getSvPl().getPlUl().getINNUL()));
         }
 
         // Поиск счетов
         LinkedList<String> accCodes = new LinkedList<>();
-        for (ZSVRequest r: requests) {
+        for (ZSVRequest r: requestsToProcess) {
             for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
                 accCodes.add(poUkazannim.getNomSch());
             }
         }
         Map<String, Map<String, Object> > accounts = selectAccounts(accCodes, allAccsClients, idBank);
+        // Разбор найденных счетов
+        for (ZSVRequest r: requestsToProcess) {
+            // Если запрос "по всем" счетам, то поиск соответствия делать не надо
+            if (r.getZapnoVipis().getpoVsem() != null) {
+                // Если по запрошенному счету счет не найден, то нужно делать отдельный ответ с кодом 42 (счет не найден)
+                for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
+                    if (!accounts.containsKey(poUkazannim.getNomSch())) {
+                        // Запрошенный счет не найден. Формируем ответ
+                        ZSVResponse response = new ZSVResponse();
+                        // TODO: 01.06.2018 Добавить формирование ответа
+                        respMap.get(r).add(response);
+                    }
+                }
+            }
+        }
 
         // Запрос остатков
         // Сбор всех запрашиваемых счетов в список
@@ -279,7 +328,7 @@ public class ZSVEngine {
         Date minDate = datesFrom.stream().min(Date::compareTo).get();
         Date maxDate = datesFrom.stream().max(Date::compareTo).get();
 
-        Map<String, Map<String, Object> > rest = selectRest(idAccs, minDate, maxDate, idBank);
+        Map<Long, Map<String, Object> > rest = selectRest(idAccs, minDate, maxDate, idBank);
 
         // TODO: 30.05.2018 Запрос операций
 
