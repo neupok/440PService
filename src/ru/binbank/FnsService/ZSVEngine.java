@@ -136,7 +136,7 @@ public class ZSVEngine {
         return result;
     }
 
-    private  Map<String, Map<String, Object> > selectRest(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
+    private Map<String, Map<String, Object> > selectRest(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
         // Форматируем даты
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
         String stringMindate = format.format(minDate);
@@ -193,7 +193,7 @@ public class ZSVEngine {
      * @param requests
      * @throws SQLException
      */
-    private Map<Long, Object> selectOperacii(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
+    private Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > selectOperacii(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
         ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> allOperacii = new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>();
 
         // Форматируем даты
@@ -212,60 +212,51 @@ public class ZSVEngine {
         Statement stmt = hiveConnection.createStatement();
         ResultSet resultSet = stmt.executeQuery(query);
 
+        HashMap<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > result = new HashMap<>();
+
         // Разбор результата
-        HashMap<Long, Object > result = new HashMap<>();
+        // Для каждого счёта создаём List с соответствующими этому счёту операциями
+        for (Long idAcc : idAccs) {
+            List<ZSVResponse.SvBank.Svedenia.Operacii> allAccOperacii = new ZSVResponse.SvBank.Svedenia.Operacii();
 
-        while (resultSet.next()) {
-            ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
+            while (resultSet.next()) {
+                if (resultSet.getLong("idaccount") == idAcc) {
+                    ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
 
-            ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc recvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
-            recvDoc.setBidDoc(resultSet.getString("viddoc"));
-            recvDoc.setNomDoc(resultSet.getString("docnum"));
-            recvDoc.getDataDoc(resultSet.getDate("dtoperdate"));
+                    ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc recvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
+                    recvDoc.setBidDoc(resultSet.getString("viddoc"));
+                    recvDoc.setNomDoc(resultSet.getString("docnum"));
+                    recvDoc.getDataDoc(resultSet.getDate("dtoperdate"));
 
-            ZSVResponse.SvBank.Svedenia.Operacii.RekvBank recvBank = new ZSVResponse.SvBank.Svedenia.Operacii.RekvBank();
-            recvBank.setNomKorSch(resultSet.getString("corraccnum"));
-            recvBank.setNaimBP(resultSet.getString("paybankname"));
-            recvBank.getBIKBP(resultSet.getString("paybankbik"));
+                    ZSVResponse.SvBank.Svedenia.Operacii.RekvBank recvBank = new ZSVResponse.SvBank.Svedenia.Operacii.RekvBank();
+                    recvBank.setNomKorSch(resultSet.getString("corraccnum"));
+                    recvBank.setNaimBP(resultSet.getString("paybankname"));
+                    recvBank.getBIKBP(resultSet.getString("paybankbik"));
 
-            ZSVResponse.SvBank.Svedenia.Operacii.RekvPlat recvPlat = new ZSVResponse.SvBank.Svedenia.Operacii.RekvPlat();
-            recvPlat.setNaimPP(resultSet.getString("clientlabel"));
-            recvPlat.setINNPP(resultSet.getString("clientinn"));
-            recvPlat.setKPPPP(resultSet.getString("clientkpp"));
-            recvPlat.setNomSchPP(resultSet.getString("clientaccnum"));
+                    ZSVResponse.SvBank.Svedenia.Operacii.RekvPlat recvPlat = new ZSVResponse.SvBank.Svedenia.Operacii.RekvPlat();
+                    recvPlat.setNaimPP(resultSet.getString("clientlabel"));
+                    recvPlat.setINNPP(resultSet.getString("clientinn"));
+                    recvPlat.setKPPPP(resultSet.getString("clientkpp"));
+                    recvPlat.setNomSchPP(resultSet.getString("clientaccnum"));
 
-            ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
-            summaOper.setDebet(resultSet.getString("amountdeb"));
-            summaOper.setCredit(resultSet.getString("amountcre"));
+                    ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
+                    summaOper.setDebet(resultSet.getString("amountdeb"));
+                    summaOper.setCredit(resultSet.getString("amountcre"));
 
-            operacii.setRekvDoc(recvDoc);
-            operacii.setRekvBank(recvBank);
-            operacii.setRekvPlat(recvPlat);
-            operacii.setSummaOper(summaOper);
+                    operacii.setRekvDoc(recvDoc);
+                    operacii.setRekvBank(recvBank);
+                    operacii.setRekvPlat(recvPlat);
+                    operacii.setSummaOper(summaOper);
 
-            //allOperacii.add(operacii);
+                    allAccOperacii.add(operacii);
+                }
+            }
 
+            result.put(idAcc, allAccOperacii);
 
-
-            result.put(resultSet.getLong("idaccount"));
-
-
-            HashMap<String, Object> rowMap = new HashMap<>();
-            // Заполняем значениями атрибутов
-            rowMap.put("dt", resultSet.getDate("dt"));
-            rowMap.put("amount", resultSet.getLong("amount"));
-
-            result.put(resultSet.getString("idaccount"), rowMap);
-
-
-            HashMap<String, Object> rowMap = new HashMap<>();
-            // Заполняем значениями атрибутов
-            rowMap.put("idacc", resultSet.getLong("idacc"));
-            rowMap.put("idclient", resultSet.getLong("idclient"));
-
-            result.put(resultSet.getString("code"), rowMap);
-
+            resultSet.beforeFirst();
         }
+
 
         resultSet.close();
         stmt.close();
