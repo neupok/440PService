@@ -136,7 +136,7 @@ public class ZSVEngine {
         return result;
     }
 
-    private  Map<Long, Map<String, Object> > selectRest(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
+    private  Map<String, Map<String, Object> > selectRest(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
         // Форматируем даты
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
         String stringMindate = format.format(minDate);
@@ -157,12 +157,12 @@ public class ZSVEngine {
         HashMap<String, Map<String, Object> > result = new HashMap<>();
 
         while (resultSet.next()) {
-            HashMap<Long, Object> rowMap = new HashMap<>();
+            HashMap<String, Object> rowMap = new HashMap<>();
             // Заполняем значениями атрибутов
             rowMap.put("dt", resultSet.getDate("dt"));
             rowMap.put("amount", resultSet.getLong("amount"));
 
-            result.put(resultSet.getLong("idaccount"), rowMap);
+            result.put(resultSet.getString("idaccount"), rowMap);
         }
 
         resultSet.close();
@@ -193,8 +193,8 @@ public class ZSVEngine {
      * @param requests
      * @throws SQLException
      */
-    public List<ZSVResponse.SvBank.Svedenia.Operacii> String selectOperacii(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) {
-
+    private Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > selectOperacii(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
+/*
         ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> allOperacii = new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>();
 
         // Форматируем даты
@@ -203,7 +203,7 @@ public class ZSVEngine {
         String stringMaxdate = format.format(maxDate);
 
         // Формирование текста запроса
-        String query = "select description, viddoc, dtoperdate, docnum, docnum, corraccnum, paybankname,"
+        String query = "select idaccount, description, viddoc, dtoperdate, docnum, docnum, corraccnum, paybankname,"
                 .concat("      paybankbik, clientlabel, clientinn, clientkpp, clientaccnum, amountdeb, amountcre")
                 .concat(" from zsv_lines_parquet ")
                 .concat("where idaccount in (")
@@ -214,7 +214,7 @@ public class ZSVEngine {
         ResultSet resultSet = stmt.executeQuery(query);
 
         // Разбор результата
-        HashMap<String, Map<String, Object> > result = new HashMap<>();
+        HashMap<Long, Object > result = new HashMap<>();
 
         while (resultSet.next()) {
             ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
@@ -244,9 +244,11 @@ public class ZSVEngine {
             operacii.setRekvPlat(recvPlat);
             operacii.setSummaOper(summaOper);
 
-            allOperacii.add(operacii);
+            //allOperacii.add(operacii);
 
-            HashMap<String, Object> rowMap = new HashMap<>();
+
+
+            result.put(resultSet.getLong("idaccount"));
 
 
             HashMap<String, Object> rowMap = new HashMap<>();
@@ -255,12 +257,22 @@ public class ZSVEngine {
             rowMap.put("amount", resultSet.getLong("amount"));
 
             result.put(resultSet.getString("idaccount"), rowMap);
+
+
+            HashMap<String, Object> rowMap = new HashMap<>();
+            // Заполняем значениями атрибутов
+            rowMap.put("idacc", resultSet.getLong("idacc"));
+            rowMap.put("idclient", resultSet.getLong("idclient"));
+
+            result.put(resultSet.getString("code"), rowMap);
+
         }
 
         resultSet.close();
         stmt.close();
 
-        return result;
+        return result;*/
+return null;
 
     }
 
@@ -292,7 +304,7 @@ public class ZSVEngine {
             {
                 // Формирование ответа об отсутствии банка
                 ZSVResponse response = new ZSVResponse();
-                // TODO: 01.06.2018 формирование ответа с ошибкой    
+                // TODO: 01.06.2018 формирование ответа с ошибкой
                 respMap.get(r).add(response);
             }
         }
@@ -323,7 +335,7 @@ public class ZSVEngine {
 
         // Клиентов, по которым пришел запрос по всем счетам, выделяем в отдельный список
         LinkedList<Long> allAccsClients = new LinkedList<>();
-        for (ZSVRequest r: requestsToProcess) {
+        for (ZSVRequest r: requests) {
             if (r.getZapnoVipis().getpoVsem() != null)
                 allAccsClients.add(existingInns.get(r.getZapnoVipis().getSvPl().getPlUl().getINNUL()));
         }
@@ -352,12 +364,13 @@ public class ZSVEngine {
             }
         }
 
-        // Запрос остатков
         // Сбор всех запрашиваемых счетов в список
         LinkedList<Long> idAccs = new LinkedList<>();
         for (Map<String, Object> val: accounts.values()) {
             idAccs.add((Long) val.get("idacc"));
         }
+
+        // Запрос остатков
         // Определение минимальной и максимальной дат
         LinkedList<Date> datesFrom = new LinkedList<>();
         LinkedList<Date> datesTo = new LinkedList<>();
@@ -367,91 +380,19 @@ public class ZSVEngine {
             datesTo.add(zaPeriod.getDateEnd().toGregorianCalendar().getTime());
         }
         Date minDate = datesFrom.stream().min(Date::compareTo).get();
-        Date maxDate = datesFrom.stream().max(Date::compareTo).get();
+        Date maxDate = datesTo.stream().max(Date::compareTo).get();
 
-        Map<Long, Map<String, Object> > rest = selectRest(idAccs, minDate, maxDate, idBank);
+        Map<String, Map<String, Object> > rest = selectRest(idAccs, minDate, maxDate, idBank);
 
-        // TODO: 30.05.2018 Запрос операций
+        // Запрос операций
+        Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii =
+                selectOperacii(idAccs, minDate, maxDate, idBank);
 
-
-        // Все, что ниже - старое
-
-
-        ArrayList<ZSVResponse> responses = new ArrayList<>();
-
-        createHiveConnection();
-        //Statement stmt = getStatement();
-
-        try {
-            // Формировапние текста запроса
-            String resultSet = selectOperacii(idAccs);
+        // Формирование ответов
 
 
-            // Выполнение запроса по операциям
-            //ResultSet resultSet = stmt.executeQuery(hiveQuery);
+        return null;
 
-            // Заполнение массива строками результата
-            SimpleDateFormat formatResponse = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-            // Группировка объектов по счетам
-            Map opersByAcc = new HashMap<String, ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>>();
-
-            while (resultSet.next()) {
-                ZSVResponse zsvResponse = new ZSVResponse();
-
-                ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
-
-                // a.dtoperdate
-                ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc rekvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
-
-                GregorianCalendar dataDocGreg = new GregorianCalendar();
-                dataDocGreg.setTime(formatResponse.parse(resultSet.getString(1)));
-                javax.xml.datatype.XMLGregorianCalendar dataDocGregXML = DatatypeFactory.newInstance().newXMLGregorianCalendar(dataDocGreg);
-                rekvDoc.setDataDoc(dataDocGregXML);
-
-                // Номер счета
-                String accountCode = resultSet.getString(2);
-
-                // Суммы по операции
-                ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
-
-                // a.amountdeb
-                BigDecimal amountDebetBigDecimal = new BigDecimal(resultSet.getString(3));
-                summaOper.setDebet( amountDebetBigDecimal);
-
-                // a.amountcre
-                BigDecimal amountCreditBigDecimal = new BigDecimal(resultSet.getString(4));
-                summaOper.setCredit(amountCreditBigDecimal);
-
-            // Сборка объекта
-            operacii.setRekvDoc(rekvDoc);
-            operacii.setSummaOper(summaOper);
-
-            // Сохранение в разрезе счета
-            if (!opersByAcc.containsKey(accountCode))
-                opersByAcc.put(accountCode, new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>());
-
-            ((ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>)opersByAcc.get(accountCode)).add(operacii);
-
-            /*
-            zsvResponse.setSvBank();
-
-            zsvResponse.setOperdate(formatResponse.parse(resultSet.getString(1)));
-            zsvResponse.s .setCode(resultSet.getString(2));
-            zsvResponse.setAmountDeb(resultSet.getString(3));
-            zsvResponse.setAmountCred(resultSet.getString(4));*/
-
-                responses.add(zsvResponse);
-            }
-        } catch (SQLException eSQL) {
-            eSQL.printStackTrace();
-        } catch (ParseException eParse) {
-            eParse.printStackTrace();
-        } finally {
-            closeHiveConnection();
-            closeStatement(stmt);
-            return responses;
-        }
 
     }
 }
