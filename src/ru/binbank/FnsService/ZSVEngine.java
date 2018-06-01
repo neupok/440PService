@@ -2,6 +2,7 @@ package ru.binbank.fnsservice;
 
 import java.io.*;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.text.ParseException;
@@ -16,7 +17,9 @@ import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 import sun.awt.image.ImageWatched;
 
+import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.XMLGregorianCalendar;
 
 public class ZSVEngine {
     private String driverName = "org.apache.hive.jdbc.HiveDriver";
@@ -136,7 +139,7 @@ public class ZSVEngine {
         return result;
     }
 
-    private  Map<String, Map<String, Object> > selectRest(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
+    private  Map<Long, Map<Date, BigDecimal> > selectRest(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
         // Форматируем даты
         SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
         String stringMindate = format.format(minDate);
@@ -154,15 +157,14 @@ public class ZSVEngine {
         ResultSet resultSet = stmt.executeQuery(query);
 
         // Разбор результата
-        HashMap<String, Map<String, Object> > result = new HashMap<>();
+        HashMap<Long, Map<Date, BigDecimal> > result = new HashMap<>();
 
         while (resultSet.next()) {
-            HashMap<String, Object> rowMap = new HashMap<>();
+            HashMap<Date, BigDecimal> rowMap = new HashMap<>();
             // Заполняем значениями атрибутов
-            rowMap.put("dt", resultSet.getDate("dt"));
-            rowMap.put("amount", resultSet.getLong("amount"));
+            rowMap.put(resultSet.getDate("dt"), resultSet.getBigDecimal("amount"));
 
-            result.put(resultSet.getString("idaccount"), rowMap);
+            result.put(resultSet.getLong("idaccount"), rowMap);
         }
 
         resultSet.close();
@@ -382,17 +384,188 @@ return null;
         Date minDate = datesFrom.stream().min(Date::compareTo).get();
         Date maxDate = datesTo.stream().max(Date::compareTo).get();
 
-        Map<String, Map<String, Object> > rest = selectRest(idAccs, minDate, maxDate, idBank);
+        Map<Long, Map<Date, BigDecimal> > rest = selectRest(idAccs, minDate, maxDate, idBank);
 
         // Запрос операций
         Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii =
                 selectOperacii(idAccs, minDate, maxDate, idBank);
 
         // Формирование ответов
+        //makeResponses();
+
+
 
 
         return null;
 
 
+    }
+
+    private void makeResponses(Iterable<ZSVRequest> requests, Map<String, Long> banks, Map<String, Long> inns,
+                               Map<String, Map<String, Object> > accounts,
+                               Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii,
+                               Map<Long, Map<Date, BigDecimal> > rests)
+    {
+        ArrayList<ZSVResponse> responses = new ArrayList<>();
+
+        for (ZSVRequest r: requests) {
+            // Определим id банка
+            if (banks.get(r.getZapnoVipis().getsvBank().getBIK()) == null) {
+                // Банк, указанный в запросе, в базе отсутствует. Формируем соответствующий ответ.
+                ZSVResponse response = new ZSVResponse();
+                response.setChast(BigInteger.valueOf(1));
+                response.setIs(BigInteger.valueOf(1));
+
+                ZSVResponse.Result result = new ZSVResponse.Result();
+                result.setKodResProverki("41");
+                response.getResult().add(result);
+
+                responses.add(response);
+                continue; // к следующему запросу
+            }
+
+            // Определим клиента
+            Long clientId = inns.get(r.getZapnoVipis().getSvPl().getPlUl().getINNUL());
+            if (!(clientId == null)) {
+                // Клиент, указанный в запросе, в базе отсутствует. Формируем соответствующий ответ.
+                ZSVResponse response = new ZSVResponse();
+                response.setChast(BigInteger.valueOf(1));
+                response.setIs(BigInteger.valueOf(1));
+
+                ZSVResponse.SvBank svBank = new ZSVResponse.SvBank();
+                ZSVResponse.SvBank.Result result = new ZSVResponse.SvBank.Result();
+                result.setKodResProverki("44");
+                svBank.getResult().add(result);
+
+                response.setSvBank(svBank);
+                responses.add(response);
+                continue; // к следующему запросу
+            }
+
+            // Отбираем счета, относящиеся к запросу.
+            HashMap<String, Map<String, Object> > accs = new HashMap<>();
+            // Поиск по указанным
+            for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
+                // Поиск указанных счетов по номеру
+                accs.put(poUkazannim.getNomSch(), accounts.get(poUkazannim.getNomSch()));
+            }
+            // Если в запросе "по всем", то поиск счетов по клиенту
+            if (r.getZapnoVipis().getpoVsem() != null) {
+                for (Map.Entry<String, Map<String, Object> > val: accounts.entrySet()) {
+                    if (val.getValue().getOrDefault("idclient", 0).equals(clientId))
+                        accs.put(val.getKey(), val.getValue());
+                }
+            }
+
+            // Сведения
+            LinkedList<ZSVResponse.SvBank.Svedenia> svedList = new LinkedList<>();
+
+            // По каждому найденному счету сформировать ответ
+            for (String accCode : accs.keySet()) {
+                Map<String, Object> accAttr = accs.get(accCode);
+                Long accId = (Long) accAttr.get("idacc");
+
+                ZSVResponse.SvBank.Svedenia svedenia = new ZSVResponse.SvBank.Svedenia();
+                // TODO: 01.06.2018 Заполнение атрибутов
+                svedenia.setNomSch(accCode);
+
+                // Остатки
+                ZSVRequest.ZapnoVipis.ZaPeriod zaPeriod = r.getZapnoVipis().getzaPeriod();
+                Rests accRests = getAccountRest(
+                        accId,
+                        zaPeriod.getDateBeg().toGregorianCalendar().getTime(),
+                        zaPeriod.getDateEnd().toGregorianCalendar().getTime(),
+                        rests.get(accId));
+                // Установка даты начала и конца периода
+                GregorianCalendar gc = new GregorianCalendar(); gc.setTime(accRests.dateNach);
+                try {
+                    svedenia.setDataNach(DatatypeFactory.newInstance().newXMLGregorianCalendar(gc));
+                } catch (DatatypeConfigurationException e) {
+                    e.printStackTrace();
+                }
+                gc = new GregorianCalendar(); gc.setTime(accRests.dateKon);
+                try {
+                    svedenia.setDataKon(DatatypeFactory.newInstance().newXMLGregorianCalendar(gc));
+                } catch (DatatypeConfigurationException e) {
+                    e.printStackTrace();
+                }
+                // Установка остатков
+                svedenia.setOstatNach(accRests.ostatokNach);
+                svedenia.setOstatKon(accRests.ostatokKon);
+
+                // Поиск и добавление операций
+                List<ZSVResponse.SvBank.Svedenia.Operacii> opers = operacii.get(accId);
+                svedenia.getOperacii().addAll(opers);
+
+                // Добавление сведения в общий список
+                svedList.add(svedenia);
+            }
+
+            // Проверить, что по всем указанным в запросе счетам есть сведения. Если нет, то добавить сведения с ошибкой.
+            for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
+                if (!accs.containsKey(poUkazannim.getNomSch())) {
+                    ZSVResponse.SvBank.Svedenia svedenia = new ZSVResponse.SvBank.Svedenia();
+                    ZSVResponse.SvBank.Svedenia.Result result = new ZSVResponse.SvBank.Svedenia.Result();
+                    result.setKodResProverki("42");
+                    svedenia.getResult().add(result);
+
+                    // Добавление сведения в общий список
+                    svedList.add(svedenia);
+                }
+            }
+            
+            
+           /*
+            // Отбираем остатки
+            HashMap<String, Map<String, Object> > rest = new HashMap<>();
+            // Цикл по счетам
+            for (Map.Entry<String, Map<String, Object>> val : accs.entrySet()) {
+                // Определим идентификатор счета
+                Long accId = (Long) val.getValue().get("idacc");
+                // Поиск остатков
+                for (:
+                     ) {
+                    
+                }
+            }
+            
+            
+            
+            for (Map.Entry<Long, Map<String, Object> > val: rests.entrySet()) {
+                Long accId = val
+
+                if (accs.keySet().contains(val.getKey())
+            }
+
+            Map<Long, Map<String, Object> > rest*/
+        }
+    }
+
+    private Rests getAccountRest(Long accId, Date desiredDateFrom, Date desiredDateTo, Map<Date, BigDecimal> rests) {
+        // Поиск минимальной и максимальной дат в данных
+/*        ArrayList<Date> dates = new ArrayList<>();
+        for (Map.Entry<String, Object> val: rests.entrySet()) {
+            if (val.getKey().equals("dt"))
+                dates.add((Date) val.getValue());
+        }*/
+
+        Rests result = new Rests();
+        // Расчет дат, на которые берутся остатки
+        Date datesMin = Collections.min(rests.keySet());
+        Date datesMax = Collections.max(rests.keySet());
+
+        result.dateNach = desiredDateFrom.compareTo(datesMin) > 0 ? desiredDateFrom : datesMin;
+        result.dateKon  = desiredDateTo.compareTo(datesMax) < 0 ? desiredDateTo : datesMax;
+        result.ostatokNach = rests.get(result.dateNach);
+        result.ostatokKon = rests.get(result.dateKon);
+
+        return result;
+    }
+
+    private class Rests {
+        Date dateNach;
+        Date dateKon;
+        BigDecimal ostatokNach;
+        BigDecimal ostatokKon;
     }
 }
