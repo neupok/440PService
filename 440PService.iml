@@ -24,5 +24,18 @@
     </orderEntry>
     <orderEntry type="library" name="commons-logging-1.1.1" level="project" />
     <orderEntry type="library" name="commons-collections-3.2.1" level="project" />
+    <orderEntry type="module-library" scope="PROVIDED">
+      <library>
+        <CLASSES>
+          <root url="file://C:/Program Files/Hive jdbc/jdbc4" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="file://C:/Program Files/Hive jdbc/jdbc4" />
+        </SOURCES>
+        <jarDirectory url="file://C:/Program Files/Hive jdbc/jdbc4" recursive="false" />
+        <jarDirectory url="file://C:/Program Files/Hive jdbc/jdbc4" recursive="false" type="SOURCES" />
+      </library>
+    </orderEntry>
   </component>
 </module>

@@ -48,8 +48,6 @@ public class RequestConnector {
             for (File f: dir.listFiles()) {
                 ZSVRequest zsvRequest = (ZSVRequest)jaxbUnmarshaller.unmarshal(f);
                 requests.add(zsvRequest);
-                System.out.println(zsvRequest);
-
                 // Сохранение связи запроса и файла
                 requestFiles.put(zsvRequest, f.getAbsolutePath());
             }
@@ -63,7 +61,8 @@ public class RequestConnector {
         for (ZSVRequest r: requests) {
             if (requestFiles.containsKey(r)) {
                 File f = new File(requestFiles.get(r));
-                f.renameTo(new File(processedDir + f.getName()));
+                String newFileName = processedDir + "/" + f.getName();
+                f.renameTo(new File(newFileName));
             }
         }
     }

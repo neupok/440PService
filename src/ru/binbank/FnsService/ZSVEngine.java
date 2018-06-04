@@ -1,9 +1,7 @@
 package ru.binbank.fnsservice;
 
-import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -11,31 +9,24 @@ import java.util.*;
 import java.util.Date;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.commons.lang.StringUtils;
 import ru.binbank.fnsservice.contracts.BankType;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
-import sun.awt.image.ImageWatched;
+import ru.binbank.fnsservice.utils.ConfigHandler;
 
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
 public class ZSVEngine {
-    private String driverName = "org.apache.hive.jdbc.HiveDriver";
     private Connection hiveConnection;
     //private Statement stmt;
 
-    // Параметры подключения
-    private String connectString;
-    private String connectLogin;
-    private String connectPassword;
+    // Параметры hive
+    private final ConfigHandler.HiveConfig hiveConfig;
 
-    public ZSVEngine(String connectString, String connectLogin, String connectPassword) {
-        this.connectString = connectString;
-        this.connectLogin = connectLogin;
-        this.connectPassword = connectPassword;
+    public ZSVEngine(ConfigHandler.HiveConfig hiveConfig) {
+        this.hiveConfig = hiveConfig;
     }
 
     private class RequestsParams {
@@ -43,11 +34,11 @@ public class ZSVEngine {
     }
 
     public void createHiveConnection() throws SQLException, ClassNotFoundException {
-        Class.forName(driverName);
+        Class.forName(hiveConfig.driverName);
         hiveConnection = DriverManager.getConnection(
-                connectString,     // строка соединения, например "jdbc:hive2://msk-hadoop01:10000/default"
-                connectLogin,
-                connectPassword
+                hiveConfig.connString,     // строка соединения, например "jdbc:hive2://msk-hadoop01:10000/default"
+                hiveConfig.login,
+                hiveConfig.password
         );
     }
 
@@ -59,7 +50,7 @@ public class ZSVEngine {
     private Map<String, Long> selectBankIdByBIC(Collection<String> bics) throws SQLException {
         // Формирование текста запроса
         String query = "select idbank, bic from 440_p.bank where bic in ("
-                .concat(bics.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
+                .concat(bics.stream().distinct().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
                 .concat(")");
 
         // Выполнение запроса
@@ -128,10 +119,12 @@ public class ZSVEngine {
         while (resultSet.next()) {
             HashMap<String, Object> rowMap = new HashMap<>();
             // Заполняем значениями атрибутов
-            rowMap.put("idacc", resultSet.getLong("idacc"));
-            rowMap.put("idclient", resultSet.getLong("idclient"));
+            // Hive при выполнении union добавляет к названию столбца префикс,
+            // поэтому доступ к полям по имени здесь не подходит - используем индексы.
+            rowMap.put("idacc", resultSet.getLong(1));
+            rowMap.put("idclient", resultSet.getLong(2));
 
-            result.put(resultSet.getString("code"), rowMap);
+            result.put(resultSet.getString(3), rowMap);
         }
 
         resultSet.close();
@@ -177,7 +170,8 @@ public class ZSVEngine {
 
 
     public void closeHiveConnection() throws SQLException {
-        hiveConnection.close();
+        if (hiveConnection != null)
+            hiveConnection.close();
     }
 
 
@@ -303,113 +297,140 @@ public class ZSVEngine {
      * @throws SQLException
      */
     public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException, ClassNotFoundException, DatatypeConfigurationException {
-        // Соответствие запросов и ответов
-        HashMap<ZSVRequest, List<ZSVResponse> > respMap = new HashMap<>();
-        // Для каждого запроса создать пустой список ответов
-        for (ZSVRequest r: requests)
-            respMap.put(r, new LinkedList<>());
+        try {
+            // Открытие соединения
+            createHiveConnection();
 
-        // Запросы, по которым еще не сформирован ответ
-        Iterable<ZSVRequest> requestsToProcess;
+            // Соответствие запросов и ответов
+            HashMap<ZSVRequest, List<ZSVResponse>> respMap = new HashMap<>();
+            // Для каждого запроса создать пустой список ответов
+            for (ZSVRequest r : requests)
+                respMap.put(r, new LinkedList<>());
 
-        // Определение идентификаторов банков
-        LinkedList<String> bics = new LinkedList<>();
-        for (ZSVRequest r: requests) {
-            bics.add(r.getZapnoVipis().getsvBank().getBIK());
-        }
-        Map<String, Long> banks = selectBankIdByBIC(bics);
-        // Проверка, что банки найдены
-        for (ZSVRequest r: requests) {
-            if (!banks.containsKey(r.getZapnoVipis().getsvBank().getBIK()))
-            {
-                // Формирование ответа об отсутствии банка
-                ZSVResponse response = new ZSVResponse();
-                // TODO: 01.06.2018 формирование ответа с ошибкой
-                respMap.get(r).add(response);
+            // Запросы, по которым еще не сформирован ответ
+            Iterable<ZSVRequest> requestsToProcess;
+
+            // Определение идентификаторов банков
+            LinkedList<String> bics = new LinkedList<>();
+            for (ZSVRequest r : requests) {
+                bics.add(r.getZapnoVipis().getsvBank().getBIK());
             }
-        }
-        // Запросы, по которым уже есть ответы, не обрабатываем
-        requestsToProcess = requests.stream().filter(zsvRequest -> respMap.get(zsvRequest).isEmpty()).collect(Collectors.toList());
-
-        // TODO: 30.05.2018 сделать правильную начитку банка
-        Long idBank = (Long) banks.values().toArray()[0];
-
-        // Поиск клиентов
-        LinkedList<String> inns = new LinkedList<>();
-        // Обрабатываются только запросы, по которым еще нет ответа
-        for (ZSVRequest r: requestsToProcess) {
-            inns.add(r.getZapnoVipis().getSvPl().getPlUl().getINNUL());
-        }
-        Map<String, Long> existingInns = selectExistingInn(inns, idBank);
-        // Разбор найденных клиентов
-        for (ZSVRequest r: requestsToProcess) {
-            if (!existingInns.containsKey(r.getZapnoVipis().getSvPl().getPlUl().getINNUL())) {
-                // Формирование ответа об отсутствии клиента
-                ZSVResponse response = new ZSVResponse();
-                // TODO: 01.06.2018 формирование ответа с ошибкой
-                respMap.get(r).add(response);
+            Map<String, Long> banks = selectBankIdByBIC(bics);
+            // Проверка, что банки найдены
+            for (ZSVRequest r : requests) {
+                if (!banks.containsKey(r.getZapnoVipis().getsvBank().getBIK())) {
+                    // Формирование ответа об отсутствии банка
+                    ZSVResponse response = new ZSVResponse();
+                    // TODO: 01.06.2018 формирование ответа с ошибкой
+                    respMap.get(r).add(response);
+                }
             }
-        }
-        // Запросы, по которым уже есть ответы, не обрабатываем
-        requestsToProcess = requests.stream().filter(zsvRequest -> respMap.get(zsvRequest).isEmpty()).collect(Collectors.toList());
+            // Запросы, по которым уже есть ответы, не обрабатываем
+            requestsToProcess = requests.stream().filter(zsvRequest -> respMap.get(zsvRequest).isEmpty()).collect(Collectors.toList());
 
-        // Клиентов, по которым пришел запрос по всем счетам, выделяем в отдельный список
-        LinkedList<Long> allAccsClients = new LinkedList<>();
-        for (ZSVRequest r: requests) {
-            if (r.getZapnoVipis().getpoVsem() != null)
-                allAccsClients.add(existingInns.get(r.getZapnoVipis().getSvPl().getPlUl().getINNUL()));
-        }
+            // TODO: 30.05.2018 сделать правильную начитку банка
+            Long idBank = (Long) banks.values().toArray()[0];
 
-        // Поиск счетов
-        LinkedList<String> accCodes = new LinkedList<>();
-        for (ZSVRequest r: requestsToProcess) {
-            for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
-                accCodes.add(poUkazannim.getNomSch());
+            // Поиск клиентов
+            LinkedList<String> inns = new LinkedList<>();
+            // Обрабатываются только запросы, по которым еще нет ответа
+            for (ZSVRequest r : requestsToProcess) {
+                inns.add(getRequestInn(r));
             }
-        }
-        Map<String, Map<String, Object> > accounts = selectAccounts(accCodes, allAccsClients, idBank);
-        // Разбор найденных счетов
-        for (ZSVRequest r: requestsToProcess) {
-            // Если запрос "по всем" счетам, то поиск соответствия делать не надо
-            if (r.getZapnoVipis().getpoVsem() != null) {
-                // Если по запрошенному счету счет не найден, то нужно делать отдельный ответ с кодом 42 (счет не найден)
-                for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
-                    if (!accounts.containsKey(poUkazannim.getNomSch())) {
-                        // Запрошенный счет не найден. Формируем ответ
-                        ZSVResponse response = new ZSVResponse();
-                        // TODO: 01.06.2018 Добавить формирование ответа
-                        respMap.get(r).add(response);
+            Map<String, Long> existingInns = selectExistingInn(inns, idBank);
+            // Разбор найденных клиентов
+            /* Скорее всего не нужно. так как ответы обрабатываются централизованно
+            for (ZSVRequest r : requestsToProcess) {
+                if (!existingInns.containsKey(r.getZapnoVipis().getSvPl().getPlUl().getINNUL())) {
+                    // Формирование ответа об отсутствии клиента
+                    ZSVResponse response = new ZSVResponse();
+                    // TODO: 01.06.2018 формирование ответа с ошибкой
+                    respMap.get(r).add(response);
+                }
+            }*/
+            // Запросы, по которым уже есть ответы, не обрабатываем
+            requestsToProcess = requests.stream().filter(zsvRequest -> respMap.get(zsvRequest).isEmpty()).collect(Collectors.toList());
+
+            // Клиентов, по которым пришел запрос по всем счетам, выделяем в отдельный список
+            LinkedList<Long> allAccsClients = new LinkedList<>();
+            for (ZSVRequest r : requests) {
+                if (r.getZapnoVipis().getpoVsem() != null) {
+                    Long clientId = existingInns.get(getRequestInn(r));
+                    if (clientId != null)
+                        allAccsClients.add(clientId);
+                }
+            }
+
+            // Поиск счетов
+            LinkedList<String> accCodes = new LinkedList<>();
+            for (ZSVRequest r : requestsToProcess) {
+                for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim : r.getZapnoVipis().getpoUkazannim()) {
+                    accCodes.add(poUkazannim.getNomSch());
+                }
+            }
+            Map<String, Map<String, Object>> accounts = selectAccounts(accCodes, allAccsClients, idBank);
+            // Разбор найденных счетов
+            for (ZSVRequest r : requestsToProcess) {
+                // Если запрос "по всем" счетам, то поиск соответствия делать не надо
+                if (r.getZapnoVipis().getpoVsem() != null) {
+                    // Если по запрошенному счету счет не найден, то нужно делать отдельный ответ с кодом 42 (счет не найден)
+                    for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim : r.getZapnoVipis().getpoUkazannim()) {
+                        if (!accounts.containsKey(poUkazannim.getNomSch())) {
+                            // Запрошенный счет не найден. Формируем ответ
+                            ZSVResponse response = new ZSVResponse();
+                            // TODO: 01.06.2018 Добавить формирование ответа
+                            respMap.get(r).add(response);
+                        }
                     }
                 }
             }
+
+            // Сбор всех запрашиваемых счетов в список
+            LinkedList<Long> idAccs = new LinkedList<>();
+            for (Map<String, Object> val : accounts.values()) {
+                idAccs.add((Long) val.get("idacc"));
+            }
+
+            // Запрос остатков
+            // Определение минимальной и максимальной дат
+            LinkedList<Date> datesFrom = new LinkedList<>();
+            LinkedList<Date> datesTo = new LinkedList<>();
+            for (ZSVRequest r : requests) {
+                ZSVRequest.ZapnoVipis.ZaPeriod zaPeriod = r.getZapnoVipis().getzaPeriod();
+                datesFrom.add(zaPeriod.getDateBeg().toGregorianCalendar().getTime());
+                datesTo.add(zaPeriod.getDateEnd().toGregorianCalendar().getTime());
+            }
+            Date minDate = datesFrom.stream().min(Date::compareTo).get();
+            Date maxDate = datesTo.stream().max(Date::compareTo).get();
+
+            Map<Long, Map<Date, BigDecimal>> rest = selectRest(idAccs, minDate, maxDate, idBank);
+
+            // Запрос операций
+            Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii>> operacii =
+                    selectOperacii(idAccs, minDate, maxDate, idBank);
+
+            // Формирование ответов
+            return makeResponses(requests, banks, existingInns, accounts, null/* debug operacii*/, rest);
         }
-
-        // Сбор всех запрашиваемых счетов в список
-        LinkedList<Long> idAccs = new LinkedList<>();
-        for (Map<String, Object> val: accounts.values()) {
-            idAccs.add((Long) val.get("idacc"));
+        finally {
+            closeHiveConnection();
         }
+    }
 
-        // Запрос остатков
-        // Определение минимальной и максимальной дат
-        LinkedList<Date> datesFrom = new LinkedList<>();
-        LinkedList<Date> datesTo = new LinkedList<>();
-        for (ZSVRequest r: requests) {
-            ZSVRequest.ZapnoVipis.ZaPeriod zaPeriod = r.getZapnoVipis().getzaPeriod();
-            datesFrom.add(zaPeriod.getDateBeg().toGregorianCalendar().getTime());
-            datesTo.add(zaPeriod.getDateEnd().toGregorianCalendar().getTime());
-        }
-        Date minDate = datesFrom.stream().min(Date::compareTo).get();
-        Date maxDate = datesTo.stream().max(Date::compareTo).get();
-
-        Map<Long, Map<Date, BigDecimal> > rest = selectRest(idAccs, minDate, maxDate, idBank);
-
-        // Запрос операций
-        Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii =
-                selectOperacii(idAccs, minDate, maxDate, idBank);
-
-        // Формирование ответов
-        return makeResponses(requests, banks, existingInns, accounts, null/* debug operacii*/, rest);
+    /**
+     * Определение ИНН запроса
+     * @param r
+     * @return
+     */
+    private String getRequestInn(ZSVRequest r) {
+        String inn = null;
+        if (r.getZapnoVipis().getSvPl().getPlUl() != null)
+            inn = r.getZapnoVipis().getSvPl().getPlUl().getINNUL();
+        else if (r.getZapnoVipis().getSvPl().getPlIp() != null)
+            inn = r.getZapnoVipis().getSvPl().getPlIp().getINNIP();
+        else if (r.getZapnoVipis().getSvPl().getPFL() != null)
+            inn = r.getZapnoVipis().getSvPl().getPFL().getInnFl();
+        return inn;
     }
 
     private Collection<ZSVResponse> makeResponses(Iterable<ZSVRequest> requests, Map<String, Long> banks, Map<String, Long> inns,

@@ -53,6 +53,19 @@ public class ConfigHandler {
     }
 
     /**
+     * Название класса JDBC-драйвера.
+     */
+    private String jdbcDriverName;
+
+    public String getJdbcDriverName() {
+        return jdbcDriverName;
+    }
+
+    public void setJdbcDriverName(String jdbcDriverName) {
+        this.jdbcDriverName = jdbcDriverName;
+    }
+
+    /**
      * Настройки hive
      */
     private HiveConfig hiveConfig;
@@ -77,8 +90,10 @@ public class ConfigHandler {
         setBatchSize(Integer.parseInt(xmlConfig.getString("process." + Dictionary.BATCH_SIZE)));
         setInputDir(xmlConfig.getString("process." + Dictionary.INPUT_DIR));
         setProcessedDir(xmlConfig.getString("process." + Dictionary.PROCESSED_DIR));
+
         // hive
-        HiveConfig hiveConfig = new HiveConfig();
+        hiveConfig = new HiveConfig();
+        hiveConfig.driverName = xmlConfig.getString("hive.driver_name");
         hiveConfig.connString = xmlConfig.getString("hive.connection_string");
         hiveConfig.login = xmlConfig.getString("hive.login");
         hiveConfig.password = xmlConfig.getString("hive.password");
@@ -91,6 +106,7 @@ public class ConfigHandler {
         public String connString;
         public String login;
         public String password;
+        public String driverName;
     }
 }
 

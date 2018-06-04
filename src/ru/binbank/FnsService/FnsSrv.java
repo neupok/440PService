@@ -34,10 +34,12 @@ public class FnsSrv {
                                   configHandler.getProcessedDir());
         Collection<ZSVRequest> requests = requestConnector.fetchRequests();
 
+        // debug
+        //requestConnector.moveToProcessedFolder(requests);
+        //exit(0);
+
         // Получение ответов
-        ru.binbank.fnsservice.ZSVEngine zsvEngine = new ru.binbank.fnsservice.ZSVEngine(configHandler.getHiveConfig().connString,
-                configHandler.getHiveConfig().login,
-                configHandler.getHiveConfig().password);
+        ru.binbank.fnsservice.ZSVEngine zsvEngine = new ru.binbank.fnsservice.ZSVEngine(configHandler.getHiveConfig());
         Collection<ZSVResponse> zsvResponses = null;
         try {
             zsvResponses = zsvEngine.getResult(requests);

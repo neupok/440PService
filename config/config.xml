@@ -5,10 +5,16 @@
         <!-- Максимальное количество обрабатываемых за один раз запросов -->
         <batch_size>100</batch_size>
         <input_dir>./input</input_dir>
-        <input_dir>./processed</input_dir>
+        <processed_dir>./processed</processed_dir>
     </process>
 
     <hive>
+        <!-- Для Linux -->
+        <!--
+        <driver_name>org.apache.hive.jdbc.HiveDriver</driver_name>
+        -->
+        <!-- Для Windows -->
+        <driver_name>com.cloudera.hive.jdbc4.HS2Driver</driver_name>
         <connection_string>jdbc:hive2://msk-hadoop01:10000/440_p</connection_string>
         <login>hadoop</login>
         <password>HDPwd12345</password>
