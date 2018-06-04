@@ -5,6 +5,7 @@ import ru.binbank.fnsservice.contracts.ZSVResponse;
 import ru.binbank.fnsservice.utils.Command;
 import ru.binbank.fnsservice.utils.ConfigHandler;
 
+import javax.xml.datatype.DatatypeConfigurationException;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.Collection;
@@ -14,8 +15,7 @@ public class FnsSrv {
     /**
      * Точка входа в программу.
      */
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) throws DatatypeConfigurationException {
         // Разбор параметров командной строки
         Command command = new Command(args);
         String config = command.getConfigOpt();
