@@ -196,6 +196,7 @@ public class ZSVEngine {
      * @param requests
      * @throws SQLException
      */
+/*
     private Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > selectOperacii(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException {
         ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> allOperacii = new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>();
 
@@ -266,7 +267,7 @@ public class ZSVEngine {
 
         return result;
     }
-
+*/
 
     /**
      * Получение ответов на запросы ФНС.
@@ -376,11 +377,12 @@ public class ZSVEngine {
         Map<Long, Map<Date, BigDecimal> > rest = selectRest(idAccs, minDate, maxDate, idBank);
 
         // Запрос операций
-        Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii =
-                selectOperacii(idAccs, minDate, maxDate, idBank);
+// debug
+//        Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii =
+//                selectOperacii(idAccs, minDate, maxDate, idBank);
 
         // Формирование ответов
-        return makeResponses(requests, banks, existingInns, accounts, operacii, rest);
+        return makeResponses(requests, banks, existingInns, accounts, null/* debug operacii*/, rest);
     }
 
     private Collection<ZSVResponse> makeResponses(Iterable<ZSVRequest> requests, Map<String, Long> banks, Map<String, Long> inns,
@@ -524,14 +526,15 @@ public class ZSVEngine {
         return responses;
     }
 
+    /**
+     * Выбор входящего и исходящего остатков по счету на даты, указанные в запросе, с учетом дат существования счета.
+     * @param accId
+     * @param desiredDateFrom
+     * @param desiredDateTo
+     * @param rests
+     * @return
+     */
     private Rests getAccountRest(Long accId, Date desiredDateFrom, Date desiredDateTo, Map<Date, BigDecimal> rests) {
-        // Поиск минимальной и максимальной дат в данных
-/*        ArrayList<Date> dates = new ArrayList<>();
-        for (Map.Entry<String, Object> val: rests.entrySet()) {
-            if (val.getKey().equals("dt"))
-                dates.add((Date) val.getValue());
-        }*/
-
         Rests result = new Rests();
         // Расчет дат, на которые берутся остатки
         Date datesMin = Collections.min(rests.keySet());
@@ -552,6 +555,11 @@ public class ZSVEngine {
         BigDecimal ostatokKon;
     }
 
+    /**
+     * Копирование атрибутов банка из запроса в ответ.
+     * @param svBank
+     * @param bankFrom
+     */
     public void copyBankAttr(ZSVResponse.SvBank svBank, BankType bankFrom) {
         svBank.setRegNom(bankFrom.getRegNom());
         svBank.setNaimBank(bankFrom.getNaim());

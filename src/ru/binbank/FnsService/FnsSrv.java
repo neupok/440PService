@@ -28,7 +28,10 @@ public class FnsSrv {
         }
 
         // Чтение входящих сообщений
-        ru.binbank.fnsservice.RequestConnector requestConnector = new ru.binbank.fnsservice.RequestConnector(configHandler.getBatchSize());
+        ru.binbank.fnsservice.RequestConnector requestConnector = new ru.binbank.fnsservice
+                .RequestConnector(configHandler.getBatchSize(),
+                                  configHandler.getInputDir(),
+                                  configHandler.getProcessedDir());
         Collection<ZSVRequest> requests = requestConnector.fetchRequests();
 
         // Получение ответов

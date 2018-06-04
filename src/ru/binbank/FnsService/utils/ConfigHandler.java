@@ -40,6 +40,19 @@ public class ConfigHandler {
     }
 
     /**
+     * Директория, в которую перемещаются обработанные файлы
+     */
+    private String processedDir;
+
+    public String getProcessedDir() {
+        return processedDir;
+    }
+
+    public void setProcessedDir(String processedDir) {
+        this.processedDir = processedDir;
+    }
+
+    /**
      * Настройки hive
      */
     private HiveConfig hiveConfig;
@@ -63,6 +76,7 @@ public class ConfigHandler {
         // Чтение параметров
         setBatchSize(Integer.parseInt(xmlConfig.getString("process." + Dictionary.BATCH_SIZE)));
         setInputDir(xmlConfig.getString("process." + Dictionary.INPUT_DIR));
+        setProcessedDir(xmlConfig.getString("process." + Dictionary.PROCESSED_DIR));
         // hive
         HiveConfig hiveConfig = new HiveConfig();
         hiveConfig.connString = xmlConfig.getString("hive.connection_string");

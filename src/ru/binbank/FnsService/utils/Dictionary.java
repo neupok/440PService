@@ -10,4 +10,5 @@ public class Dictionary {
      */
     public static final String BATCH_SIZE = "batch_size";
     public static final String INPUT_DIR = "input_dir";
+    public static final String PROCESSED_DIR = "processed_dir";
 }
