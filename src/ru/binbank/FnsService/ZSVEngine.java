@@ -380,17 +380,10 @@ public class ZSVEngine {
                 selectOperacii(idAccs, minDate, maxDate, idBank);
 
         // Формирование ответов
-        //makeResponses();
-
-
-
-
-        return null;
-
-
+        return makeResponses(requests, banks, existingInns, accounts, operacii, rest);
     }
 
-    private void makeResponses(Iterable<ZSVRequest> requests, Map<String, Long> banks, Map<String, Long> inns,
+    private Collection<ZSVResponse> makeResponses(Iterable<ZSVRequest> requests, Map<String, Long> banks, Map<String, Long> inns,
                                Map<String, Map<String, Object> > accounts,
                                Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii,
                                Map<Long, Map<Date, BigDecimal> > rests)
@@ -402,6 +395,8 @@ public class ZSVEngine {
             if (banks.get(r.getZapnoVipis().getsvBank().getBIK()) == null) {
                 // Банк, указанный в запросе, в базе отсутствует. Формируем соответствующий ответ.
                 ZSVResponse response = new ZSVResponse();
+                // TODO: 04.06.2018 Установить номер запроса
+                response.setZapros("");
                 response.setChast(BigInteger.valueOf(1));
                 response.setIs(BigInteger.valueOf(1));
 
@@ -418,6 +413,7 @@ public class ZSVEngine {
             if (!(clientId == null)) {
                 // Клиент, указанный в запросе, в базе отсутствует. Формируем соответствующий ответ.
                 ZSVResponse response = new ZSVResponse();
+                // TODO: 04.06.2018 Установить номер запроса
                 response.setChast(BigInteger.valueOf(1));
                 response.setIs(BigInteger.valueOf(1));
 
@@ -509,6 +505,7 @@ public class ZSVEngine {
             int i = 0; // счетчик сведений
             for (ZSVResponse.SvBank.Svedenia svedenia: svedList) {
                 ZSVResponse response = new ZSVResponse();
+                // TODO: 04.06.2018 Установить номер запроса
                 ZSVResponse.SvBank svBank = new ZSVResponse.SvBank();
                 // Копирование атрибутов банка из запроса
                 copyBankAttr(svBank, r.getZapnoVipis().getsvBank());
@@ -519,10 +516,12 @@ public class ZSVEngine {
 
                 svBank.setSvedenia(svedenia);
                 ++i;
+
+                responses.add(response);
             }
-
-
         }
+
+        return responses;
     }
 
     private Rests getAccountRest(Long accId, Date desiredDateFrom, Date desiredDateTo, Map<Date, BigDecimal> rests) {
