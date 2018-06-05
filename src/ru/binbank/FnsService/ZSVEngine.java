@@ -35,11 +35,18 @@ public class ZSVEngine {
 
     public void createHiveConnection() throws SQLException, ClassNotFoundException {
         Class.forName(hiveConfig.driverName);
-        hiveConnection = DriverManager.getConnection(
+/*        hiveConnection = DriverManager.getConnection(
                 hiveConfig.connString,     // строка соединения, например "jdbc:hive2://msk-hadoop01:10000/default"
                 hiveConfig.login,
                 hiveConfig.password
-        );
+        );*/
+        Properties properties = new Properties();
+        properties.setProperty("AuthMech", "3" /* User Name and Password */);
+        properties.setProperty("UID", hiveConfig.login);
+        properties.setProperty("PWD", hiveConfig.password);
+        properties.setProperty("UseNativeQuery", "1");
+
+        hiveConnection = DriverManager.getConnection(hiveConfig.connString, properties);
     }
 
     /**
@@ -154,11 +161,15 @@ public class ZSVEngine {
         HashMap<Long, Map<Date, BigDecimal> > result = new HashMap<>();
 
         while (resultSet.next()) {
-            HashMap<Date, BigDecimal> rowMap = new HashMap<>();
+            Long idAcc = resultSet.getLong("idaccount");
+            Map<Date, BigDecimal> rowMap = result.get(idAcc);
+            // Если данных по данному счету еще не было, то создаем Map
+            if (rowMap == null) {
+                rowMap = new HashMap<>();
+                result.put(idAcc, rowMap);
+            }
             // Заполняем значениями атрибутов
             rowMap.put(resultSet.getDate("dt"), resultSet.getBigDecimal("amount"));
-
-            result.put(resultSet.getLong("idaccount"), rowMap);
         }
 
         resultSet.close();
@@ -204,7 +215,8 @@ public class ZSVEngine {
                 .concat("      paybankbik, clientlabel, clientinn, clientkpp, clientaccnum, amountdeb, amountcre")
                 .concat(" from zsv_lines_parquet ")
                 .concat("where idaccount in (")
-                .concat(idAccs.stream().map(x -> "'" + x + "'").collect(Collectors.joining(",")));
+                .concat(idAccs.stream().map(x -> "'" + x + "'").collect(Collectors.joining(",")))
+                .concat(")");
 
         // Выполнение запроса
         Statement stmt = hiveConnection.createStatement();
@@ -395,7 +407,8 @@ public class ZSVEngine {
             // Определение минимальной и максимальной дат
             LinkedList<Date> datesFrom = new LinkedList<>();
             LinkedList<Date> datesTo = new LinkedList<>();
-            for (ZSVRequest r : requests) {
+            // TODO: 05.06.2018 Анализировать дату не по всем счетам
+            for (ZSVRequest r : requestsToProcess) {
                 ZSVRequest.ZapnoVipis.ZaPeriod zaPeriod = r.getZapnoVipis().getzaPeriod();
                 datesFrom.add(zaPeriod.getDateBeg().toGregorianCalendar().getTime());
                 datesTo.add(zaPeriod.getDateEnd().toGregorianCalendar().getTime());
