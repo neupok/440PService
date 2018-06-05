@@ -222,80 +222,85 @@ public class ZSVEngine {
         Statement stmt = hiveConnection.createStatement();
         ResultSet resultSet = stmt.executeQuery(query);
 
+        // Объект для итогового результата:
         HashMap<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > result = new HashMap<>();
 
+        LinkedList<ZSVResponse.SvBank.Svedenia.Operacii> opers;
+
         // Разбор результата
-        // Для каждого счёта создаём List с соответствующими этому счёту операциями
-        for (Long idAcc : idAccs) {
-            ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> allAccOperacii = new ArrayList<>();
+        while (resultSet.next()) {
 
-            while (resultSet.next()) {
-                if (resultSet.getLong("idaccount") == idAcc) {
-                    ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
+            // Записываем id счёта из текущей строки результата hive-запроса:
+            Long idAcc = resultSet.getLong("idaccount");
 
-                    //
-                    // Объект recvDoc
-                    ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc recvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
+            // Проверяем, есть ли для данного счёта запись в результирующем map'е.
+            // Если нет, создаём запись для данного счёта.
+            opers = (LinkedList<ZSVResponse.SvBank.Svedenia.Operacii>) result.get(idAcc);
 
-                    // recvDoc.BidDoc
-                    BigInteger viddocBigInteger = new BigInteger(resultSet.getString("viddoc"));
-                    recvDoc.setBidDoc(viddocBigInteger);
-
-                    // recvDoc.NomDoc
-                    recvDoc.setNomDoc(resultSet.getString("docnum"));
-
-                    // recvDoc.DataDoc
-                    GregorianCalendar dataDoc_Greg = new GregorianCalendar();
-                    dataDoc_Greg.setTime(resultSet.getDate("dtoperdate"));
-                    XMLGregorianCalendar dataDoc_XMLGreg = DatatypeFactory.newInstance().newXMLGregorianCalendar(dataDoc_Greg);
-                    recvDoc.setDataDoc(dataDoc_XMLGreg);
-
-                    //
-                    // Объект recvBank
-                    ZSVResponse.SvBank.Svedenia.Operacii.RekvBank recvBank = new ZSVResponse.SvBank.Svedenia.Operacii.RekvBank();
-                    recvBank.setNomKorSch(resultSet.getString("corraccnum"));
-                    recvBank.setNaimBP(resultSet.getString("paybankname"));
-                    recvBank.setBIKBP(resultSet.getString("paybankbik"));
-
-                    //
-                    // Объект recvPlat
-                    ZSVResponse.SvBank.Svedenia.Operacii.RekvPlat recvPlat = new ZSVResponse.SvBank.Svedenia.Operacii.RekvPlat();
-                    recvPlat.setNaimPP(resultSet.getString("clientlabel"));
-                    recvPlat.setINNPP(resultSet.getString("clientinn"));
-                    recvPlat.setKPPPP(resultSet.getString("clientkpp"));
-                    recvPlat.setNomSchPP(resultSet.getString("clientaccnum"));
-
-                    //
-                    // Объект summaOper
-                    ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
-
-                    // summaOper.viddoc
-                    BigInteger amountdebBigInteger = new BigInteger(resultSet.getString("viddoc"));
-                    recvDoc.setBidDoc(amountdebBigInteger);
-
-                    // summaOper.amountdeb
-                    BigDecimal amountdebBigDecimal = new BigDecimal(resultSet.getString("amountdeb"));
-                    summaOper.setDebet(amountdebBigDecimal);
-
-                    // summaOper.amountcre
-                    BigDecimal amountcreBigDecimal = new BigDecimal(resultSet.getString("amountcre"));
-                    summaOper.setDebet(amountcreBigDecimal);
-
-
-                    operacii.setRekvDoc(recvDoc);
-                    operacii.setRekvBank(recvBank);
-                    operacii.setRekvPlat(recvPlat);
-                    operacii.setSummaOper(summaOper);
-
-                    allAccOperacii.add(operacii);
-                }
+            if(opers == null) {
+                opers = new LinkedList<ZSVResponse.SvBank.Svedenia.Operacii>();
+                result.put(idAcc, opers);
             }
 
-            result.put(idAcc, allAccOperacii);
+            // Формируем объект класса ZSVResponse.SvBank.Svedenia.Operacii для данной строки результата hive-запроса:
+            ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
 
-            resultSet.beforeFirst();
+            //
+            // Объект recvDoc
+            ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc recvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
+
+            // recvDoc.BidDoc
+            BigInteger viddocBigInteger = new BigInteger(resultSet.getString("viddoc"));
+            recvDoc.setBidDoc(viddocBigInteger);
+
+            // recvDoc.NomDoc
+            recvDoc.setNomDoc(resultSet.getString("docnum"));
+
+            // recvDoc.DataDoc
+            GregorianCalendar dataDoc_Greg = new GregorianCalendar();
+            dataDoc_Greg.setTime(resultSet.getDate("dtoperdate"));
+            XMLGregorianCalendar dataDoc_XMLGreg = DatatypeFactory.newInstance().newXMLGregorianCalendar(dataDoc_Greg);
+            recvDoc.setDataDoc(dataDoc_XMLGreg);
+
+            //
+            // Объект recvBank
+            ZSVResponse.SvBank.Svedenia.Operacii.RekvBank recvBank = new ZSVResponse.SvBank.Svedenia.Operacii.RekvBank();
+            recvBank.setNomKorSch(resultSet.getString("corraccnum"));
+            recvBank.setNaimBP(resultSet.getString("paybankname"));
+            recvBank.setBIKBP(resultSet.getString("paybankbik"));
+
+            //
+            // Объект recvPlat
+            ZSVResponse.SvBank.Svedenia.Operacii.RekvPlat recvPlat = new ZSVResponse.SvBank.Svedenia.Operacii.RekvPlat();
+            recvPlat.setNaimPP(resultSet.getString("clientlabel"));
+            recvPlat.setINNPP(resultSet.getString("clientinn"));
+            recvPlat.setKPPPP(resultSet.getString("clientkpp"));
+            recvPlat.setNomSchPP(resultSet.getString("clientaccnum"));
+
+            //
+            // Объект summaOper
+            ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
+
+            // summaOper.viddoc
+            BigInteger amountdebBigInteger = new BigInteger(resultSet.getString("viddoc"));
+            recvDoc.setBidDoc(amountdebBigInteger);
+
+            // summaOper.amountdeb
+            BigDecimal amountdebBigDecimal = new BigDecimal(resultSet.getString("amountdeb"));
+            summaOper.setDebet(amountdebBigDecimal);
+
+            // summaOper.amountcre
+            BigDecimal amountcreBigDecimal = new BigDecimal(resultSet.getString("amountcre"));
+            summaOper.setDebet(amountcreBigDecimal);
+
+            operacii.setRekvDoc(recvDoc);
+            operacii.setRekvBank(recvBank);
+            operacii.setRekvPlat(recvPlat);
+            operacii.setSummaOper(summaOper);
+
+            // Записываем объект класса ZSVResponse.SvBank.Svedenia.Operacii в список opers:
+            opers.add(operacii);
         }
-
 
         resultSet.close();
         stmt.close();
