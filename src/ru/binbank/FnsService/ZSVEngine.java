@@ -196,6 +196,36 @@ public class ZSVEngine {
     }
 
 
+    // Проверка строки, которая должна конвертироваться в BigInteger.
+    // Если строка пустая, то возвращается BigInteger.ZERO.
+    private BigInteger getBigIntFromString (String inString) {
+
+        if (inString == null || inString == "") {
+            return BigInteger.ZERO;
+        }
+        else {
+            BigInteger outBigInt = new BigInteger(inString);
+            return outBigInt;
+        }
+
+    }
+
+    // Проверка строки, которая должна конвертироваться в BigDecimal.
+    // Если строка пустая, то возвращается BigDecimal.ZERO.
+    private BigDecimal getBigDecFromString (String inString) {
+
+        if (inString == null || inString == "") {
+            return BigDecimal.ZERO;
+        }
+        else {
+            BigDecimal outBigDec = new BigDecimal(inString);
+            return outBigDec;
+        }
+
+    }
+
+
+
     /**
      * Формирование текста запроса по операциям
      * @param requests
@@ -249,9 +279,8 @@ public class ZSVEngine {
             ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc recvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
 
             // recvDoc.BidDoc
-// debug
-//            BigInteger viddocBigInteger = new BigInteger(resultSet.getString("viddoc"));
-//            recvDoc.setBidDoc(viddocBigInteger);
+            BigInteger viddocBigInteger = getBigIntFromString(resultSet.getString("viddoc"));
+            recvDoc.setBidDoc(viddocBigInteger);
 
             // recvDoc.NomDoc
             recvDoc.setNomDoc(resultSet.getString("docnum"));
@@ -282,11 +311,11 @@ public class ZSVEngine {
             ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
 
             // summaOper.amountdeb
-            BigDecimal amountdebBigDecimal = new BigDecimal(resultSet.getString("amountdeb"));
+            BigDecimal amountdebBigDecimal = getBigDecFromString(resultSet.getString("amountdeb"));
             summaOper.setDebet(amountdebBigDecimal);
 
             // summaOper.amountcre
-            BigDecimal amountcreBigDecimal = new BigDecimal(resultSet.getString("amountcre"));
+            BigDecimal amountcreBigDecimal = getBigDecFromString(resultSet.getString("amountcre"));
             summaOper.setCredit(amountcreBigDecimal);
 
             operacii.setRekvDoc(recvDoc);
