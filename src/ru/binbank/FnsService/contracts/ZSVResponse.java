@@ -399,8 +399,8 @@ import javax.xml.datatype.XMLGregorianCalendar;
  */
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "", propOrder = {
-        "\u0441\u0432\u0411\u0430\u043d\u043a",
-        "\u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442"
+        "svBank",
+        "result"
 })
 @XmlRootElement(name = "\u041e\u0442\u0432\u0435\u0442")
 public class ZSVResponse {
@@ -1027,8 +1027,8 @@ public class ZSVResponse {
      */
     @XmlAccessorType(XmlAccessType.FIELD)
     @XmlType(name = "", propOrder = {
-            "\u0441\u0432\u0435\u0434\u0435\u043d\u0438\u044f",
-            "\u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442"
+            "result",
+            "svedenia"
     })
     public static class SvBank
             extends BankType
@@ -1527,8 +1527,8 @@ public class ZSVResponse {
          */
         @XmlAccessorType(XmlAccessType.FIELD)
         @XmlType(name = "", propOrder = {
-                "\u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442",
-                "\u043e\u043f\u0435\u0440\u0430\u0446\u0438\u0438"
+                "operacii",
+                "result"
         })
         public static class Svedenia {
 
@@ -1986,10 +1986,10 @@ public class ZSVResponse {
              */
             @XmlAccessorType(XmlAccessType.FIELD)
             @XmlType(name = "", propOrder = {
-                    "\u0440\u0435\u043a\u0432\u0414\u043e\u043a",
-                    "\u0440\u0435\u043a\u0432\u0411\u0430\u043d\u043a\u0430",
-                    "\u0440\u0435\u043a\u0432\u041f\u043b\u0430\u0442",
-                    "\u0441\u0443\u043c\u043c\u0430\u041e\u043f\u0435\u0440"
+                    "rekvDoc",
+                    "rekvBank",
+                    "rekvPlat",
+                    "summaOper"
             })
             public static class Operacii {
 

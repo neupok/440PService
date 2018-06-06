@@ -229,7 +229,6 @@ public class ZSVEngine {
 
         // Разбор результата
         while (resultSet.next()) {
-
             // Записываем id счёта из текущей строки результата hive-запроса:
             Long idAcc = resultSet.getLong("idaccount");
 
@@ -250,8 +249,9 @@ public class ZSVEngine {
             ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc recvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
 
             // recvDoc.BidDoc
-            BigInteger viddocBigInteger = new BigInteger(resultSet.getString("viddoc"));
-            recvDoc.setBidDoc(viddocBigInteger);
+// debug
+//            BigInteger viddocBigInteger = new BigInteger(resultSet.getString("viddoc"));
+//            recvDoc.setBidDoc(viddocBigInteger);
 
             // recvDoc.NomDoc
             recvDoc.setNomDoc(resultSet.getString("docnum"));
@@ -287,7 +287,7 @@ public class ZSVEngine {
 
             // summaOper.amountcre
             BigDecimal amountcreBigDecimal = new BigDecimal(resultSet.getString("amountcre"));
-            summaOper.setDebet(amountcreBigDecimal);
+            summaOper.setCredit(amountcreBigDecimal);
 
             operacii.setRekvDoc(recvDoc);
             operacii.setRekvBank(recvBank);
@@ -424,7 +424,7 @@ public class ZSVEngine {
                     selectOperacii(idAccs, minDate, maxDate, idBank);
 
             // Формирование ответов
-            return makeResponses(requests, banks, existingInns, accounts, null/* debug operacii*/, rest);
+            return makeResponses(requests, banks, existingInns, accounts, operacii, rest);
         }
         finally {
             closeHiveConnection();
@@ -473,8 +473,8 @@ public class ZSVEngine {
             }
 
             // Определим клиента
-            Long clientId = inns.get(r.getZapnoVipis().getSvPl().getPlUl().getINNUL());
-            if (!(clientId == null)) {
+            Long clientId = inns.get(getRequestInn(r));
+            if (clientId == null) {
                 // Клиент, указанный в запросе, в базе отсутствует. Формируем соответствующий ответ.
                 ZSVResponse response = new ZSVResponse();
                 // TODO: 04.06.2018 Установить номер запроса
@@ -496,7 +496,9 @@ public class ZSVEngine {
             // Поиск по указанным
             for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
                 // Поиск указанных счетов по номеру
-                accs.put(poUkazannim.getNomSch(), accounts.get(poUkazannim.getNomSch()));
+                String nomSch = poUkazannim.getNomSch();
+                if (accounts.containsKey(nomSch))
+                    accs.put(nomSch, accounts.get(nomSch));
             }
             // Если в запросе "по всем", то поиск счетов по клиенту
             if (r.getZapnoVipis().getpoVsem() != null) {
@@ -544,7 +546,12 @@ public class ZSVEngine {
 
                 // Поиск и добавление операций
                 List<ZSVResponse.SvBank.Svedenia.Operacii> opers = operacii.get(accId);
-                svedenia.getOperacii().addAll(opers);
+                if (opers != null)
+                    svedenia.getOperacii().addAll(opers);
+                else {
+                    int x = 0; // for debug breakpoint
+                }
+
 
                 // Добавление сведения в общий список
                 svedList.add(svedenia);
