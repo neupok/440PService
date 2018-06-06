@@ -107,22 +107,31 @@ public class ZSVEngine {
     }
 
     private Map<String, Map<String, Object> > selectAccounts(Collection<String> accCodes, Collection<Long> idClients, Long idBank) throws SQLException {
+        HashMap<String, Map<String, Object> > result = new HashMap<>();
+
         // Формирование текста запроса
-        String query = "select idacc, idclient, code from 440_p.account where code in ("
-                .concat(accCodes.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
-                .concat(") and idbank=").concat(idBank.toString()).concat("\n")
-                .concat("union all\n")
-                .concat("select idacc, idclient, code from 440_p.account where idclient in (")
-                .concat(idClients.stream().map(aLong -> aLong.toString()).collect(Collectors.joining(",")))
-                .concat(") and idbank=").concat(idBank.toString());
+        String queryByAccs = null;
+        if (!accCodes.isEmpty())
+            queryByAccs = "select idacc, idclient, code, currency from 440_p.account where code in ("
+                          .concat(accCodes.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
+                          .concat(") and idbank=").concat(idBank.toString()).concat("\n");
+        String queryByClient = null;
+        if (!idClients.isEmpty())
+            queryByClient ="select idacc, idclient, code, currency from 440_p.account where idclient in ("
+                 .concat(idClients.stream().map(aLong -> aLong.toString()).collect(Collectors.joining(",")))
+                 .concat(") and idbank=").concat(idBank.toString());
+        String[] queries = {queryByAccs, queryByClient };
+        String query = Arrays.stream(queries).collect(Collectors.joining("union all\n"));
+
+        // Если нечего запрашивать, то на выход.
+        if (query.isEmpty())
+            return result;
 
         // Выполнение запроса
         Statement stmt = hiveConnection.createStatement();
         ResultSet resultSet = stmt.executeQuery(query);
 
         // Разбор результата
-        HashMap<String, Map<String, Object> > result = new HashMap<>();
-
         while (resultSet.next()) {
             HashMap<String, Object> rowMap = new HashMap<>();
             // Заполняем значениями атрибутов
@@ -130,6 +139,7 @@ public class ZSVEngine {
             // поэтому доступ к полям по имени здесь не подходит - используем индексы.
             rowMap.put("idacc", resultSet.getLong(1));
             rowMap.put("idclient", resultSet.getLong(2));
+            rowMap.put("currency", resultSet.getLong(4));
 
             result.put(resultSet.getString(3), rowMap);
         }
@@ -257,7 +267,6 @@ public class ZSVEngine {
 
         // Разбор результата
         while (resultSet.next()) {
-
             // Записываем id счёта из текущей строки результата hive-запроса:
             Long idAcc = resultSet.getLong("idaccount");
 
@@ -461,7 +470,7 @@ public class ZSVEngine {
                     selectOperacii(idAccs, minDate, maxDate, idBank);
 
             // Формирование ответов
-            return makeResponses(requests, banks, existingInns, accounts, null/* debug operacii*/, rest);
+            return makeResponses(requests, banks, existingInns, accounts, operacii, rest);
         }
         finally {
             closeHiveConnection();
@@ -484,6 +493,16 @@ public class ZSVEngine {
         return inn;
     }
 
+    /**
+     * Создание ответов на основе собранной информации из базы.
+     * @param requests
+     * @param banks
+     * @param inns
+     * @param accounts
+     * @param operacii
+     * @param rests
+     * @return
+     */
     private Collection<ZSVResponse> makeResponses(Iterable<ZSVRequest> requests, Map<String, Long> banks, Map<String, Long> inns,
                                Map<String, Map<String, Object> > accounts,
                                Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii,
@@ -510,8 +529,8 @@ public class ZSVEngine {
             }
 
             // Определим клиента
-            Long clientId = inns.get(r.getZapnoVipis().getSvPl().getPlUl().getINNUL());
-            if (!(clientId == null)) {
+            Long clientId = inns.get(getRequestInn(r));
+            if (clientId == null) {
                 // Клиент, указанный в запросе, в базе отсутствует. Формируем соответствующий ответ.
                 ZSVResponse response = new ZSVResponse();
                 // TODO: 04.06.2018 Установить номер запроса
@@ -533,7 +552,9 @@ public class ZSVEngine {
             // Поиск по указанным
             for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
                 // Поиск указанных счетов по номеру
-                accs.put(poUkazannim.getNomSch(), accounts.get(poUkazannim.getNomSch()));
+                String nomSch = poUkazannim.getNomSch();
+                if (accounts.containsKey(nomSch))
+                    accs.put(nomSch, accounts.get(nomSch));
             }
             // Если в запросе "по всем", то поиск счетов по клиенту
             if (r.getZapnoVipis().getpoVsem() != null) {
@@ -554,6 +575,7 @@ public class ZSVEngine {
                 ZSVResponse.SvBank.Svedenia svedenia = new ZSVResponse.SvBank.Svedenia();
                 // TODO: 01.06.2018 Заполнение атрибутов
                 svedenia.setNomSch(accCode);
+                svedenia.setKodVal(getBigDecFromString((String) accAttr.get("currency")));
 
                 // Остатки
                 ZSVRequest.ZapnoVipis.ZaPeriod zaPeriod = r.getZapnoVipis().getzaPeriod();
@@ -581,7 +603,12 @@ public class ZSVEngine {
 
                 // Поиск и добавление операций
                 List<ZSVResponse.SvBank.Svedenia.Operacii> opers = operacii.get(accId);
-                svedenia.getOperacii().addAll(opers);
+                if (opers != null)
+                    svedenia.getOperacii().addAll(opers);
+                else {
+                    int x = 0; // for debug breakpoint
+                }
+
 
                 // Добавление сведения в общий список
                 svedList.add(svedenia);
@@ -603,7 +630,7 @@ public class ZSVEngine {
             }
 
             // Для каждого сведения создается отдельный ответ
-            int i = 0; // счетчик сведений
+            int i = 1; // счетчик сведений
             for (ZSVResponse.SvBank.Svedenia svedenia: svedList) {
                 ZSVResponse response = new ZSVResponse();
                 // TODO: 04.06.2018 Установить номер запроса

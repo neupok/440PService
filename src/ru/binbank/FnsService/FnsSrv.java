@@ -52,8 +52,7 @@ public class FnsSrv {
         }
 
         // Запись ответов
-        ru.binbank.fnsservice.ResponseConnector responseConnector = new ru.binbank.fnsservice.ResponseConnector();
+        ru.binbank.fnsservice.ResponseConnector responseConnector = new ru.binbank.fnsservice.ResponseConnector(configHandler.getOutputDir());
         responseConnector.writeResponses(zsvResponses);
-
     }
 }

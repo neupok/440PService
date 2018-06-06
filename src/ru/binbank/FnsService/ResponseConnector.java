@@ -1,9 +1,11 @@
 package ru.binbank.fnsservice;
 
+import org.apache.commons.lang.RandomStringUtils;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
+import java.io.File;
 import java.util.Collection;
 
 /**
@@ -11,7 +13,10 @@ import java.util.Collection;
  */
 public class ResponseConnector {
 
-    public ResponseConnector() {
+    private final String outputDir;
+
+    public ResponseConnector(String outputDir) {
+        this.outputDir = outputDir;
     }
 
     public void writeResponses(Collection<ZSVResponse> responses)
@@ -19,14 +24,11 @@ public class ResponseConnector {
         try {
             JAXBContext jaxbContext = JAXBContext.newInstance(ZSVResponse.class);
             Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
-
             /* set this flag to true to format the output */
-    //        jaxbMarshaller.setProperty( Marshaller.JAXB_FORMATTED_OUTPUT, true );
-            /* marshaling of java objects in xml (output to file and standard output) */
-    //        jaxbMarshaller.marshal( spain, new File( "country.xml" ) );
+            jaxbMarshaller.setProperty( Marshaller.JAXB_FORMATTED_OUTPUT, true );
 
             for (ZSVResponse r: responses) {
-                jaxbMarshaller.marshal(r, System.out );
+                jaxbMarshaller.marshal(r, new File(outputDir + "/" + RandomStringUtils.randomAlphanumeric(12) + ".xml"));
             }
         } catch (JAXBException e) {
             e.printStackTrace();

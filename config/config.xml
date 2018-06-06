@@ -4,8 +4,9 @@
     <process>
         <!-- Максимальное количество обрабатываемых за один раз запросов -->
         <batch_size>100</batch_size>
-        <input_dir>./input</input_dir>
-        <processed_dir>./processed</processed_dir>
+        <input_dir>./io/input</input_dir>
+        <processed_dir>./io/processed</processed_dir>
+        <output_dir>./io/output</output_dir>
     </process>
 
     <hive>
