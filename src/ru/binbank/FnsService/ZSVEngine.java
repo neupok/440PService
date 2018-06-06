@@ -269,10 +269,6 @@ public class ZSVEngine {
             // Объект summaOper
             ZSVResponse.SvBank.Svedenia.Operacii.SummaOper summaOper = new ZSVResponse.SvBank.Svedenia.Operacii.SummaOper();
 
-            // summaOper.viddoc
-            BigInteger amountdebBigInteger = new BigInteger(resultSet.getString("viddoc"));
-            recvDoc.setBidDoc(amountdebBigInteger);
-
             // summaOper.amountdeb
             BigDecimal amountdebBigDecimal = new BigDecimal(resultSet.getString("amountdeb"));
             summaOper.setDebet(amountdebBigDecimal);
