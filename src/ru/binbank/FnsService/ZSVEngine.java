@@ -121,7 +121,9 @@ public class ZSVEngine {
                  .concat(idClients.stream().map(aLong -> aLong.toString()).collect(Collectors.joining(",")))
                  .concat(") and idbank=").concat(idBank.toString());
         String[] queries = {queryByAccs, queryByClient };
-        String query = Arrays.stream(queries).collect(Collectors.joining("union all\n"));
+        //String query = Arrays.stream(queries).collect(Collectors.joining("union all\n"));
+
+        String query = queryByAccs;
 
         // Если нечего запрашивать, то на выход.
         if (query.isEmpty())
@@ -139,7 +141,7 @@ public class ZSVEngine {
             // поэтому доступ к полям по имени здесь не подходит - используем индексы.
             rowMap.put("idacc", resultSet.getLong(1));
             rowMap.put("idclient", resultSet.getLong(2));
-            rowMap.put("currency", resultSet.getLong(4));
+            rowMap.put("currency", resultSet.getString(4));
 
             result.put(resultSet.getString(3), rowMap);
         }
@@ -254,7 +256,8 @@ public class ZSVEngine {
                 .concat(" from zsv_lines_parquet ")
                 .concat("where idaccount in (")
                 .concat(idAccs.stream().map(x -> "'" + x + "'").collect(Collectors.joining(",")))
-                .concat(")");
+                .concat(") and dtdocdate between cast ('").concat(stringMindate).concat("' as date) ")
+                .concat("  and cast ('").concat(stringMaxdate).concat("' as date) ");
 
         // Выполнение запроса
         Statement stmt = hiveConnection.createStatement();
@@ -297,6 +300,7 @@ public class ZSVEngine {
 
             // recvDoc.BidDoc
             BigInteger viddocBigInteger = getBigIntFromString(resultSet.getString("viddoc"));
+            //BigInteger viddocBigInteger = BigInteger("");
             recvDoc.setBidDoc(viddocBigInteger);
 
             // recvDoc.NomDoc
