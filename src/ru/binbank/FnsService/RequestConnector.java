@@ -44,12 +44,16 @@ public class RequestConnector {
 
             Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
 
+            int i = 0; // счетчик
             File dir = new File(inputDir);
             for (File f: dir.listFiles()) {
                 ZSVRequest zsvRequest = (ZSVRequest)jaxbUnmarshaller.unmarshal(f);
                 requests.add(zsvRequest);
                 // Сохранение связи запроса и файла
                 requestFiles.put(zsvRequest, f.getAbsolutePath());
+                // Если достигнут лимит пакета, то выход
+                if (++i >= batchSize)
+                    break;
             }
         } catch (JAXBException e) {
             e.printStackTrace();

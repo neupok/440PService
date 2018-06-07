@@ -139,7 +139,7 @@ public class ZSVEngine {
             // поэтому доступ к полям по имени здесь не подходит - используем индексы.
             rowMap.put("idacc", resultSet.getLong(1));
             rowMap.put("idclient", resultSet.getLong(2));
-            rowMap.put("currency", resultSet.getLong(4));
+            rowMap.put("currency", resultSet.getString(4));
 
             result.put(resultSet.getString(3), rowMap);
         }
@@ -251,7 +251,8 @@ public class ZSVEngine {
                 .concat(" from zsv_lines_parquet ")
                 .concat("where idaccount in (")
                 .concat(idAccs.stream().map(x -> "'" + x + "'").collect(Collectors.joining(",")))
-                .concat(")");
+                .concat(") and dtdocdate between cast ('").concat(stringMindate).concat("' as date) ")
+                .concat("  and cast ('").concat(stringMaxdate).concat("' as date) ");
 
         // Выполнение запроса
         Statement stmt = hiveConnection.createStatement();
@@ -294,6 +295,7 @@ public class ZSVEngine {
 
             // recvDoc.BidDoc
             BigInteger viddocBigInteger = getBigIntFromString(resultSet.getString("viddoc"));
+            //BigInteger viddocBigInteger = BigInteger("");
             recvDoc.setBidDoc(viddocBigInteger);
 
             // recvDoc.NomDoc
@@ -604,6 +606,7 @@ public class ZSVEngine {
 
                 // Поиск и добавление операций
                 List<ZSVResponse.SvBank.Svedenia.Operacii> opers = operacii.get(accId);
+                if (opers != null)
                     svedenia.getOperacii().addAll(opers);
                 // Нумерация сведений
                 int i = 0;
@@ -641,9 +644,9 @@ public class ZSVEngine {
                 ZSVResponse response = new ZSVResponse();
                 // TODO: 04.06.2018 Установить номер запроса
                 ZSVResponse.SvBank svBank = new ZSVResponse.SvBank();
+                response.setSvBank(svBank);
                 // Копирование атрибутов банка из запроса
                 copyBankAttr(svBank, r.getZapnoVipis().getsvBank());
-                response.setSvBank(svBank);
                 // Нумерация сведения
                 svedenia.setPorNom(String.format("%06d", i));
                 // Нумерация ответа
