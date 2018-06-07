@@ -207,11 +207,10 @@ public class ZSVEngine {
 
 
     // Проверка строки, которая должна конвертироваться в BigInteger.
-    // Если строка пустая, то возвращается BigInteger.ZERO.
     private BigInteger getBigIntFromString (String inString) {
 
-        if (inString == null || inString == "") {
-            return BigInteger.ZERO;
+        if (inString == null || inString.equals("")) {
+            return null;
         }
         else {
             BigInteger outBigInt = new BigInteger(inString);
@@ -221,11 +220,10 @@ public class ZSVEngine {
     }
 
     // Проверка строки, которая должна конвертироваться в BigDecimal.
-    // Если строка пустая, то возвращается BigDecimal.ZERO.
     private BigDecimal getBigDecFromString (String inString) {
 
-        if (inString == null || inString == "") {
-            return BigDecimal.ZERO;
+        if (inString == null || inString.equals("")) {
+            return null;
         }
         else {
             BigDecimal outBigDec = new BigDecimal(inString);
@@ -249,7 +247,7 @@ public class ZSVEngine {
         String stringMaxdate = format.format(maxDate);
 
         // Формирование текста запроса
-        String query = "select idaccount, description, viddoc, dtoperdate, docnum, docnum, corraccnum, paybankname,"
+        String query = "select idaccount, description, dtoperdate, viddoc, dtdocdate, docnum, corraccnum, paybankname,"
                 .concat("      paybankbik, clientlabel, clientinn, clientkpp, clientaccnum, amountdeb, amountcre")
                 .concat(" from zsv_lines_parquet ")
                 .concat("where idaccount in (")
@@ -282,6 +280,15 @@ public class ZSVEngine {
             // Формируем объект класса ZSVResponse.SvBank.Svedenia.Operacii для данной строки результата hive-запроса:
             ZSVResponse.SvBank.Svedenia.Operacii operacii = new ZSVResponse.SvBank.Svedenia.Operacii();
 
+            // operacii.dataOper
+            GregorianCalendar dataOper_Greg = new GregorianCalendar();
+            dataOper_Greg.setTime(resultSet.getDate("dtoperdate"));
+            XMLGregorianCalendar dataOper_XMLGreg = DatatypeFactory.newInstance().newXMLGregorianCalendar(dataOper_Greg);
+            operacii.setDataOper(dataOper_XMLGreg);
+
+            // operacii.NaznPl
+            operacii.setNaznPl(resultSet.getString("description"));
+
             //
             // Объект recvDoc
             ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc recvDoc = new ZSVResponse.SvBank.Svedenia.Operacii.RekvDoc();
@@ -295,7 +302,7 @@ public class ZSVEngine {
 
             // recvDoc.DataDoc
             GregorianCalendar dataDoc_Greg = new GregorianCalendar();
-            dataDoc_Greg.setTime(resultSet.getDate("dtoperdate"));
+            dataDoc_Greg.setTime(resultSet.getDate("dtdocdate"));
             XMLGregorianCalendar dataDoc_XMLGreg = DatatypeFactory.newInstance().newXMLGregorianCalendar(dataDoc_Greg);
             recvDoc.setDataDoc(dataDoc_XMLGreg);
 
