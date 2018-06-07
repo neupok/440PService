@@ -19,6 +19,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSchemaType;
 import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import javax.xml.datatype.XMLGregorianCalendar;
 
 
@@ -1543,8 +1544,10 @@ public class ZSVResponse {
             @XmlAttribute(name = "\u041a\u043e\u0434\u0412\u0430\u043b")
             protected BigDecimal kodVal;
             @XmlAttribute(name = "\u0414\u0430\u0442\u0430\u041d\u0430\u0447")
+            @XmlJavaTypeAdapter(DateAdapter.class)
             protected XMLGregorianCalendar dataNach;
             @XmlAttribute(name = "\u0414\u0430\u0442\u0430\u041a\u043e\u043d")
+            @XmlJavaTypeAdapter(DateAdapter.class)
             protected XMLGregorianCalendar dataKon;
             @XmlAttribute(name = "\u041e\u0441\u0442\u0430\u0442\u041d\u0430\u0447")
             protected BigDecimal ostatNach;
@@ -2005,6 +2008,7 @@ public class ZSVResponse {
                 protected int idBlock;
                 @XmlAttribute(name = "\u0414\u0430\u0442\u0430\u041e\u043f\u0435\u0440", required = true)
                 @XmlSchemaType(name = "date")
+                @XmlJavaTypeAdapter(DateAdapter.class)
                 protected XMLGregorianCalendar dataOper;
                 @XmlAttribute(name = "\u041d\u0430\u0437\u043d\u041f\u043b")
                 protected String naznPl;
@@ -2338,6 +2342,7 @@ public class ZSVResponse {
                     protected String nomDoc;
                     @XmlAttribute(name = "\u0414\u0430\u0442\u0430\u0414\u043e\u043a", required = true)
                     @XmlSchemaType(name = "date")
+                    @XmlJavaTypeAdapter(DateAdapter.class)
                     protected XMLGregorianCalendar dataDoc;
 
                     /**
