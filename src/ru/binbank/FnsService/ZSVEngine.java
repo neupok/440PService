@@ -109,6 +109,22 @@ public class ZSVEngine {
     private Map<String, Map<String, Object> > selectAccounts(Collection<String> accCodes, Collection<Long> idClients, Long idBank) throws SQLException {
         HashMap<String, Map<String, Object> > result = new HashMap<>();
 
+        // Если в запросах есть новые коды счетов (из ЦФТ), то найдём соответствующие им старые коды (из Афины)
+        String queryByNewAcc = null;
+        if (!accCodes.isEmpty())
+            queryByNewAcc = "select codeold from account_history where codenew in ("
+                            .concat(accCodes.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(",")))
+                            .concat(")");
+
+        // Выполнение запроса поиска по новым счетам
+        Statement stmt_newAcc = hiveConnection.createStatement();
+        ResultSet resultSet_newAcc = stmt_newAcc.executeQuery(queryByNewAcc);
+
+        // Если будут найдены старые коды счетов, то добавим их в коллекцию всех счетов
+        while (resultSet_newAcc.next()) {
+            accCodes.add(resultSet_newAcc.getString("codeold"));
+        }
+
         // Формирование текста запроса
         String queryByAccs = null;
         if (!accCodes.isEmpty())
@@ -121,9 +137,7 @@ public class ZSVEngine {
                  .concat(idClients.stream().map(aLong -> aLong.toString()).collect(Collectors.joining(",")))
                  .concat(") and idbank=").concat(idBank.toString());
         String[] queries = {queryByAccs, queryByClient };
-        //String query = Arrays.stream(queries).collect(Collectors.joining("union all\n"));
-
-        String query = queryByAccs;
+        String query = Arrays.stream(queries).filter(Objects::nonNull).collect(Collectors.joining("union all\n"));
 
         // Если нечего запрашивать, то на выход.
         if (query.isEmpty())
