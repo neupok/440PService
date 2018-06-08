@@ -56,7 +56,7 @@ public class ZSVEngine {
      */
     private Map<String, Long> selectBankIdByBIC(Collection<String> bics) throws SQLException {
         // Формирование текста запроса
-        String query = "select idbank, bic from 440_p.bank where bic in ("
+        String query = "select idbank, bic from bank where bic in ("
                 .concat(bics.stream().distinct().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
                 .concat(")");
 
@@ -84,7 +84,7 @@ public class ZSVEngine {
      */
     private Map<String, Long> selectExistingInn(Collection<String> inns, Long idBank) throws SQLException {
         // Формирование текста запроса
-        String query = "select inn, idclient from 440_p.inn where inn in ("
+        String query = "select inn, idclient from inn where inn in ("
                 .concat(inns.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
                 .concat(") and idbank=").concat(idBank.toString());
 
@@ -128,12 +128,12 @@ public class ZSVEngine {
         // Формирование текста запроса
         String queryByAccs = null;
         if (!accCodes.isEmpty())
-            queryByAccs = "select idacc, idclient, code, currency from 440_p.account where code in ("
+            queryByAccs = "select idacc, idclient, code, currency from account where code in ("
                           .concat(accCodes.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(","))) // quote
                           .concat(") and idbank=").concat(idBank.toString()).concat("\n");
         String queryByClient = null;
         if (!idClients.isEmpty())
-            queryByClient ="select idacc, idclient, code, currency from 440_p.account where idclient in ("
+            queryByClient ="select idacc, idclient, code, currency from account where idclient in ("
                  .concat(idClients.stream().map(aLong -> aLong.toString()).collect(Collectors.joining(",")))
                  .concat(") and idbank=").concat(idBank.toString());
         String[] queries = {queryByAccs, queryByClient };
@@ -248,14 +248,11 @@ public class ZSVEngine {
 
     }
 
-
-
     /**
      * Формирование текста запроса по операциям
      * @param requests
      * @throws SQLException
      */
-
     private Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > selectOperacii(Collection<Long> idAccs, Date minDate, Date maxDate, Long idBank) throws SQLException, DatatypeConfigurationException {
         ArrayList<ZSVResponse.SvBank.Svedenia.Operacii> allOperacii = new ArrayList<ZSVResponse.SvBank.Svedenia.Operacii>();
 
@@ -556,6 +553,9 @@ public class ZSVEngine {
                 response.setIs(BigInteger.valueOf(1));
 
                 ZSVResponse.SvBank svBank = new ZSVResponse.SvBank();
+                // Копирование атрибутов банка из запроса
+                copyBankAttr(svBank, r.getZapnoVipis().getsvBank());
+
                 ZSVResponse.SvBank.Result result = new ZSVResponse.SvBank.Result();
                 result.setKodResProverki("44");
                 svBank.getResult().add(result);
@@ -574,6 +574,7 @@ public class ZSVEngine {
                 if (accounts.containsKey(nomSch))
                     accs.put(nomSch, accounts.get(nomSch));
             }
+
             // Если в запросе "по всем", то поиск счетов по клиенту
             if (r.getZapnoVipis().getpoVsem() != null) {
                 for (Map.Entry<String, Map<String, Object> > val: accounts.entrySet()) {
@@ -623,10 +624,16 @@ public class ZSVEngine {
                 List<ZSVResponse.SvBank.Svedenia.Operacii> opers = operacii.get(accId);
                 if (opers != null)
                     svedenia.getOperacii().addAll(opers);
-                else {
-                    int x = 0; // for debug breakpoint
-                }
+                // Нумерация сведений
+                int i = 0;
+                for (ZSVResponse.SvBank.Svedenia.Operacii oper: svedenia.getOperacii())
+                    oper.setIdBlock(++i);
 
+                // Расчет оборотов по операциям
+                svedenia.setSummaDeb(svedenia.getOperacii().stream().map(operacii1 -> operacii1.getSummaOper().getDebet())
+                                     .reduce(BigDecimal.ZERO, BigDecimal::add));
+                svedenia.setSummaKred(svedenia.getOperacii().stream().map(operacii1 -> operacii1.getSummaOper().getCredit())
+                                      .reduce(BigDecimal.ZERO, BigDecimal::add));
 
                 // Добавление сведения в общий список
                 svedList.add(svedenia);
@@ -653,10 +660,12 @@ public class ZSVEngine {
                 ZSVResponse response = new ZSVResponse();
                 // TODO: 04.06.2018 Установить номер запроса
                 ZSVResponse.SvBank svBank = new ZSVResponse.SvBank();
+                response.setSvBank(svBank);
                 // Копирование атрибутов банка из запроса
                 copyBankAttr(svBank, r.getZapnoVipis().getsvBank());
-                response.setSvBank(svBank);
-                // Нумерация
+                // Нумерация сведения
+                svedenia.setPorNom(String.format("%06d", i));
+                // Нумерация ответа
                 response.setChast(BigInteger.valueOf(i));
                 response.setIs(BigInteger.valueOf(svedList.size()));
 
