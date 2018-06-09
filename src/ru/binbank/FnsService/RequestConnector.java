@@ -1,5 +1,6 @@
 package ru.binbank.fnsservice;
 
+import ru.binbank.fnsservice.contracts.CITREQUEST;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 
 import javax.xml.bind.JAXBContext;
@@ -24,7 +25,7 @@ public class RequestConnector {
     private final String processedDir;
 
     // Соответствие запроса и файла
-    private HashMap<ZSVRequest, String> requestFiles;
+    private HashMap<CITREQUEST, String> requestFiles;
 
     /**
      *
@@ -37,20 +38,20 @@ public class RequestConnector {
         this.processedDir = processedDir;
     }
 
-    public Collection<ZSVRequest> fetchRequests() {
-        ArrayList<ZSVRequest> requests = new ArrayList<>();
+    public Collection<CITREQUEST> fetchRequests() {
+        ArrayList<CITREQUEST> requests = new ArrayList<>();
         try {
-            JAXBContext jaxbContext = JAXBContext.newInstance(ZSVRequest.class);
+            JAXBContext jaxbContext = JAXBContext.newInstance(CITREQUEST.class);
 
             Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
 
             int i = 0; // счетчик
             File dir = new File(inputDir);
             for (File f: dir.listFiles()) {
-                ZSVRequest zsvRequest = (ZSVRequest)jaxbUnmarshaller.unmarshal(f);
-                requests.add(zsvRequest);
+                CITREQUEST citrequest = (CITREQUEST) jaxbUnmarshaller.unmarshal(f);
+                requests.add(citrequest);
                 // Сохранение связи запроса и файла
-                requestFiles.put(zsvRequest, f.getAbsolutePath());
+                requestFiles.put(citrequest, f.getAbsolutePath());
                 // Если достигнут лимит пакета, то выход
                 if (++i >= batchSize)
                     break;
@@ -61,8 +62,8 @@ public class RequestConnector {
         return requests;
     }
 
-    public void moveToProcessedFolder(Collection<ZSVRequest> requests) {
-        for (ZSVRequest r: requests) {
+    public void moveToProcessedFolder(Collection<CITREQUEST> requests) {
+        for (CITREQUEST r: requests) {
             if (requestFiles.containsKey(r)) {
                 File f = new File(requestFiles.get(r));
                 String newFileName = processedDir + "/" + f.getName();
