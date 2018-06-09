@@ -115,8 +115,7 @@ public class FnsSrv {
         response.getSYSTEM().setMAINID(mainid);
 
         CITREQUEST.SYSTEM.MSGID msgid = new CITREQUEST.SYSTEM.MSGID();
-        // // TODO: 09.06.2018 Сформировать message id
-        msgid.setValue(new Long(new Random().nextLong()).toString());
+        msgid.setValue(new Integer(Math.abs(new Random().nextInt())).toString());
         response.getSYSTEM().setMSGID(msgid);
 
         CITREQUEST.SYSTEM.SYNC sync = new CITREQUEST.SYSTEM.SYNC();
