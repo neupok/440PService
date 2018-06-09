@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.stream.Collectors;
 
 import ru.binbank.fnsservice.contracts.BankType;
+import ru.binbank.fnsservice.contracts.CITREQUEST;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 import ru.binbank.fnsservice.utils.ConfigHandler;
@@ -354,7 +355,9 @@ public class ZSVEngine {
      * @param requests
      * @throws SQLException
      */
-    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests) throws SQLException, ParseException, ClassNotFoundException, DatatypeConfigurationException {
+    public Collection<ZSVResponse> getResult(Collection<ZSVRequest> requests,
+                                             Map<ZSVResponse, ZSVRequest> zsvResponseZSVRequestMap)
+            throws SQLException, ParseException, ClassNotFoundException, DatatypeConfigurationException {
         try {
             // Открытие соединения
             createHiveConnection();
@@ -469,7 +472,7 @@ public class ZSVEngine {
                     selectOperacii(idAccs, minDate, maxDate, idBank);
 
             // Формирование ответов
-            return makeResponses(requests, banks, existingInns, accounts, operacii, rest);
+            return makeResponses(requests, banks, existingInns, accounts, operacii, rest, zsvResponseZSVRequestMap);
         }
         finally {
             closeHiveConnection();
@@ -505,7 +508,7 @@ public class ZSVEngine {
     private Collection<ZSVResponse> makeResponses(Iterable<ZSVRequest> requests, Map<String, Long> banks, Map<String, Long> inns,
                                Map<String, Map<String, Object> > accounts,
                                Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii,
-                               Map<Long, Map<Date, BigDecimal> > rests)
+                               Map<Long, Map<Date, BigDecimal> > rests, Map<ZSVResponse, ZSVRequest> zsvResponseZSVRequestMap)
     {
         ArrayList<ZSVResponse> responses = new ArrayList<>();
 
@@ -524,6 +527,7 @@ public class ZSVEngine {
                 response.getResult().add(result);
 
                 responses.add(response);
+                zsvResponseZSVRequestMap.put(response, r);
                 continue; // к следующему запросу
             }
 
@@ -546,6 +550,7 @@ public class ZSVEngine {
 
                 response.setSvBank(svBank);
                 responses.add(response);
+                zsvResponseZSVRequestMap.put(response, r);
                 continue; // к следующему запросу
             }
 
@@ -555,15 +560,23 @@ public class ZSVEngine {
             for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
                 // Поиск указанных счетов по номеру
                 String nomSch = poUkazannim.getNomSch();
-                if (accounts.containsKey(nomSch))
-                    accs.put(nomSch, accounts.get(nomSch));
+                if (accounts.containsKey(nomSch)) {
+                    // По счету должны быть остатки. Если их нет, то счета не было на запрашиваемый интервал.
+                    Map<String, Object> accAttr = accounts.get(nomSch);
+                    if (rests.containsKey((Long) accAttr.get("idacc")))
+                        accs.put(nomSch, accAttr);
+                }
             }
 
             // Если в запросе "по всем", то поиск счетов по клиенту
             if (r.getZapnoVipis().getpoVsem() != null) {
                 for (Map.Entry<String, Map<String, Object> > val: accounts.entrySet()) {
-                    if (val.getValue().getOrDefault("idclient", 0).equals(clientId))
-                        accs.put(val.getKey(), val.getValue());
+                    if (val.getValue().getOrDefault("idclient", 0).equals(clientId)) {
+                        // По счету должны быть остатки. Если их нет, то счета не было на запрашиваемый интервал.
+                        Map<String, Object> accAttr = val.getValue();
+                        if (rests.containsKey((Long) accAttr.get("idacc")))
+                            accs.put(val.getKey(), accAttr);
+                    }
                 }
             }
 
@@ -576,7 +589,6 @@ public class ZSVEngine {
                 Long accId = (Long) accAttr.get("idacc");
 
                 ZSVResponse.SvBank.Svedenia svedenia = new ZSVResponse.SvBank.Svedenia();
-                // TODO: 01.06.2018 Заполнение атрибутов
                 svedenia.setNomSch(accCode);
                 svedenia.setKodVal(getBigDecFromString((String) accAttr.get("currency")));
 
@@ -656,6 +668,7 @@ public class ZSVEngine {
                 svBank.setSvedenia(svedenia);
                 ++i;
 
+                zsvResponseZSVRequestMap.put(response, r);
                 responses.add(response);
             }
         }
@@ -673,14 +686,17 @@ public class ZSVEngine {
      */
     private Rests getAccountRest(Long accId, Date desiredDateFrom, Date desiredDateTo, Map<Date, BigDecimal> rests) {
         Rests result = new Rests();
-        // Расчет дат, на которые берутся остатки
-        Date datesMin = Collections.min(rests.keySet());
-        Date datesMax = Collections.max(rests.keySet());
+        result.dateNach = desiredDateFrom;
+        result.dateKon = desiredDateTo;
 
-        result.dateNach = desiredDateFrom.compareTo(datesMin) > 0 ? desiredDateFrom : datesMin;
-        result.dateKon  = desiredDateTo.compareTo(datesMax) < 0 ? desiredDateTo : datesMax;
-        result.ostatokNach = rests.get(result.dateNach);
-        result.ostatokKon = rests.get(result.dateKon);
+        if (rests != null) {
+            result.ostatokNach = rests.containsKey(result.dateNach) ? rests.get(result.dateNach) : new BigDecimal(0);
+            result.ostatokKon = rests.containsKey(result.dateKon) ? rests.get(result.dateKon) : new BigDecimal(0);
+        }
+        else {
+            // for breakpoint
+            int x = 0;
+        }
 
         return result;
     }
