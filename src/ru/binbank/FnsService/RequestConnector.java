@@ -42,7 +42,7 @@ public class RequestConnector {
     }
 
     public Collection<CITREQUEST> fetchRequests() {
-        log.info(String.format("Fetching %d requests from [%s]", batchSize, inputDir));
+        log.info(String.format("Fetching requests from [%s] (max=%d)", inputDir, batchSize));
 
         ArrayList<CITREQUEST> requests = new ArrayList<>();
         try {
