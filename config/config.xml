@@ -9,6 +9,9 @@
         <output_dir>./io/output</output_dir>
     </process>
 
+    <!-- конфигурационный файл log4j -->
+    <log4j>log4j.properties</log4j>
+
     <hive>
         <!-- Для Linux -->
         <!--
