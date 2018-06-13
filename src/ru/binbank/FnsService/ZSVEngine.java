@@ -137,6 +137,69 @@ public class ZSVEngine {
         return result;
     }
 
+
+    // Возвращает исходную коллецию кодов счетов, в которой новые коды (из ЦФТ) заменены старыми кодами (из Афины)
+    private Collection<String> getOldAccList (Collection<String> accCodes, Map<String, String> accOldNewCodes) {
+        LinkedList<String> oldAccCodes = new LinkedList<>();
+
+        if (!accCodes.isEmpty())
+            for (String accCode : accCodes) {
+                // Проверяем, есть ли для данного счёта из запроса соответствующий ему старый счёт Афины:
+                String oldAcc = (String) accOldNewCodes.get(accCode);
+            }
+
+        return oldAccCodes;
+    }
+
+
+    // Возвращает map, в котором новому коду счёта (из ЦФТ) ставится в соответствие старый код счёта (из Афины).
+    // Составляется для счетов из коллекции, которая подаётся на вход.
+    private Map<String, String> getAccOldNewCodes (Collection<String> accCodes) throws SQLException {
+
+        // Соответствие между новыми счетами (ЦФТ) и старыми счетами (Афина) - только для счетов, имеющих такое соответствие:
+        HashMap<String, String> accOldCodes = new HashMap<>();
+
+        // Соответствие между новыми счетами (ЦФТ) и старыми счетами (Афина) - для всех счетов;
+        // если в ЦФТ код счёта такой же, то значение равно ключу:
+        HashMap<String, String> accOldNewCodes = new HashMap<>();
+
+        // Если в запросах есть новые коды счетов (из ЦФТ), то найдём соответствующие им старые коды (из Афины)
+        String queryByNewAcc = null;
+        if (!accCodes.isEmpty())
+            queryByNewAcc = "select codenew, codeold from account_history where codenew in ("
+                    .concat(accCodes.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(",")))
+                    .concat(")");
+
+        // Выполнение запроса поиска по новым счетам
+        Statement stmt_newAcc = hiveConnection.createStatement();
+        ResultSet resultSet_newAcc = stmt_newAcc.executeQuery(queryByNewAcc);
+
+        // Заполняем соответствие "новый код счёта - старый код счёта"
+        // только для счетов, имеющих такое соответствие:
+        while (resultSet_newAcc.next()) {
+            accOldCodes.put(resultSet_newAcc.getString(1), resultSet_newAcc.getString(2));
+        }
+
+        // Проходим по всем счетам из запросов:
+        for (String accCode : accCodes) {
+            String oldAcc = (String) accOldCodes.get(accCode);
+
+            // если счёта нет, значит, в ЦФТ он такой же
+            if (oldAcc.isEmpty())
+                accOldNewCodes.put(accCode, accCode);
+                // иначе - записываем соотвествие старого и нового кодов счета
+            else
+                accOldNewCodes.put(accCode, oldAcc);
+        }
+
+        resultSet_newAcc.close();
+        stmt_newAcc.close();
+
+        return accOldNewCodes;
+
+    }
+
+
     private Map<String, Map<String, Object> > selectAccounts(Collection<String> accCodes, Collection<Long> idClients, Long idBank) throws SQLException {
         HashMap<String, Map<String, Object> > result = new HashMap<>();
 
@@ -521,7 +584,14 @@ public class ZSVEngine {
                     accCodes.add(poUkazannim.getNomSch());
                 }
             }
-            Map<String, Map<String, Object>> accounts = selectAccounts(accCodes, allAccsClients, idBank);
+
+            // Формируем соответствие между новым кодом счёта (из ЦФТ) и старым кодом счёта (из Афины):
+            Map<String, String> accOldNewCodes = getAccOldNewCodes(accCodes);
+
+            // Составляем список, состоящий только из старых кодов счетов (из Афины):
+            Collection<String> oldAccList = getOldAccList(accCodes, accOldNewCodes);
+
+            Map<String, Map<String, Object>> accounts = selectAccounts(oldAccList, allAccsClients, idBank);
             // Разбор найденных счетов
             for (ZSVRequest r : requestsToProcess) {
                 // Если запрос "по всем" счетам, то поиск соответствия делать не надо
@@ -564,7 +634,7 @@ public class ZSVEngine {
                     selectOperacii(idAccs, minDate, maxDate, idBank);
 
             // Формирование ответов
-            return makeResponses(requests, banks, existingInns, accounts, operacii, rest, zsvResponseZSVRequestMap);
+            return makeResponses(requests, banks, existingInns, accounts, operacii, rest, accOldNewCodes, zsvResponseZSVRequestMap);
         }
         finally {
             closeHiveConnection();
@@ -600,7 +670,8 @@ public class ZSVEngine {
     private Collection<ZSVResponse> makeResponses(Iterable<ZSVRequest> requests, Map<String, Long> banks, Map<String, Long> inns,
                                Map<String, Map<String, Object> > accounts,
                                Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii,
-                               Map<Long, Map<Date, BigDecimal> > rests, Map<ZSVResponse, ZSVRequest> zsvResponseZSVRequestMap)
+                               Map<Long, Map<Date, BigDecimal> > rests,
+                               Map<String, String> accOldNewCodes), Map<ZSVResponse, ZSVRequest> zsvResponseZSVRequestMap)
     {
         ArrayList<ZSVResponse> responses = new ArrayList<>();
 
@@ -651,7 +722,9 @@ public class ZSVEngine {
             // Поиск по указанным
             for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
                 // Поиск указанных счетов по номеру
+                // Подменяем на старый счёт Афины
                 String nomSch = poUkazannim.getNomSch();
+                nomSch = (String) accOldNewCodes.get(nomSch);
                 if (accounts.containsKey(nomSch)) {
                     // По счету должны быть остатки. Если их нет, то счета не было на запрашиваемый интервал.
                     Map<String, Object> accAttr = accounts.get(nomSch);
@@ -681,6 +754,7 @@ public class ZSVEngine {
                 Long accId = (Long) accAttr.get("idacc");
 
                 ZSVResponse.SvBank.Svedenia svedenia = new ZSVResponse.SvBank.Svedenia();
+                // TODO: 01.06.2018 Заполнение атрибутов
                 svedenia.setNomSch(accCode);
                 svedenia.setKodVal(getBigDecFromString((String) accAttr.get("currency")));
 
@@ -729,7 +803,8 @@ public class ZSVEngine {
 
             // Проверить, что по всем указанным в запросе счетам есть сведения. Если нет, то добавить сведения с ошибкой.
             for (ZSVRequest.ZapnoVipis.poUkazannim poUkazannim: r.getZapnoVipis().getpoUkazannim()) {
-                if (!accs.containsKey(poUkazannim.getNomSch())) {
+                // заменяем poUkazannim.getNomSch() на старый счёт
+                if (!accs.containsKey(accOldNewCodes.get(poUkazannim.getNomSch()))) {
                     ZSVResponse.SvBank.Svedenia svedenia = new ZSVResponse.SvBank.Svedenia();
                     svedenia.setNomSch(poUkazannim.getNomSch());
 
@@ -760,7 +835,6 @@ public class ZSVEngine {
                 svBank.setSvedenia(svedenia);
                 ++i;
 
-                zsvResponseZSVRequestMap.put(response, r);
                 responses.add(response);
             }
         }
