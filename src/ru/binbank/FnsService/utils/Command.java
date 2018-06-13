@@ -35,7 +35,7 @@ public class Command {
         try {
             line = parser.parse(options, args);
         } catch (ParseException e) {
-            // @todo: добавить логирование как в AdapterCommand.java
+            // todo: добавить логирование как в AdapterCommand.java
             e.printStackTrace();
         }
     }
