@@ -671,7 +671,7 @@ public class ZSVEngine {
                                Map<String, Map<String, Object> > accounts,
                                Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii,
                                Map<Long, Map<Date, BigDecimal> > rests,
-                               Map<String, String> accOldNewCodes), Map<ZSVResponse, ZSVRequest> zsvResponseZSVRequestMap)
+                               Map<String, String> accOldNewCodes, Map<ZSVResponse, ZSVRequest> zsvResponseZSVRequestMap)
     {
         ArrayList<ZSVResponse> responses = new ArrayList<>();
 
