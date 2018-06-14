@@ -1,5 +1,6 @@
 package ru.binbank.fnsservice;
 
+import org.apache.log4j.Logger;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 
@@ -24,6 +25,8 @@ public class RequestConnector {
     private final String inputDir;
     private final String processedDir;
 
+    private static final Logger log = Logger.getLogger(RequestConnector.class);
+
     // Соответствие запроса и файла
     private HashMap<CITREQUEST, String> requestFiles;
 
@@ -39,6 +42,8 @@ public class RequestConnector {
     }
 
     public Collection<CITREQUEST> fetchRequests() {
+        log.info(String.format("Fetching requests from [%s] (max=%d)", inputDir, batchSize));
+
         ArrayList<CITREQUEST> requests = new ArrayList<>();
         try {
             JAXBContext jaxbContext = JAXBContext.newInstance(CITREQUEST.class);
@@ -59,6 +64,9 @@ public class RequestConnector {
         } catch (JAXBException e) {
             e.printStackTrace();
         }
+
+        log.info(String.format("Fetched %d requests", requests.size()));
+
         return requests;
     }
 

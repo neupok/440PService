@@ -2,12 +2,21 @@ package ru.binbank.fnsservice.utils;
 
 import org.apache.commons.configuration.AbstractConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
+import org.apache.log4j.helpers.Loader;
+
+import java.net.URL;
+
+import static jdk.nashorn.internal.runtime.regexp.joni.Config.log;
 
 /**
  * Класс для работы с файлом конфигурации
  *
  */
 public class ConfigHandler {
+    /**
+     * Имя конфигурационного файла log4j
+     */
+    private String log4jFile;
 
     public int getBatchSize() {
         return batchSize;
@@ -99,6 +108,13 @@ public class ConfigHandler {
         xmlConfig.setAttributeSplittingDisabled(true);
         xmlConfig.load(configFileName);
 
+        // Конфигурирование log4j
+        String log4j = xmlConfig.getString("log4j");
+        if (log4j != null) {
+            URL resouse = Loader.getResource(log4j);
+            setLog4jFile(log4j);
+        }
+
         // Чтение параметров
         setBatchSize(Integer.parseInt(xmlConfig.getString("process." + Dictionary.BATCH_SIZE)));
         setInputDir(xmlConfig.getString("process." + Dictionary.INPUT_DIR));
@@ -111,6 +127,14 @@ public class ConfigHandler {
         hiveConfig.connString = xmlConfig.getString("hive.connection_string");
         hiveConfig.login = xmlConfig.getString("hive.login");
         hiveConfig.password = xmlConfig.getString("hive.password");
+    }
+
+    public void setLog4jFile(String log4jFile) {
+        this.log4jFile = log4jFile;
+    }
+
+    public String getLog4jFile() {
+        return log4jFile;
     }
 
     /**

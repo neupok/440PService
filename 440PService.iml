@@ -38,5 +38,6 @@
         <jarDirectory url="file://C:/Program Files/Hive jdbc/jdbc4" recursive="false" type="SOURCES" />
       </library>
     </orderEntry>
+    <orderEntry type="library" name="log4j-1.2.16" level="project" />
   </component>
 </module>

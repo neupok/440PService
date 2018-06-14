@@ -9,6 +9,8 @@ import java.util.*;
 import java.util.Date;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.time.StopWatch;
+import org.apache.log4j.Logger;
 import ru.binbank.fnsservice.contracts.BankType;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
@@ -23,6 +25,8 @@ import javax.xml.datatype.XMLGregorianCalendar;
 public class ZSVEngine {
     private Connection hiveConnection;
     //private Statement stmt;
+
+    private static final Logger log = Logger.getLogger(ZSVEngine.class);
 
     // Параметры hive
     private final ConfigHandler.HiveConfig hiveConfig;
@@ -48,7 +52,11 @@ public class ZSVEngine {
         properties.setProperty("PWD", hiveConfig.password);
         properties.setProperty("UseNativeQuery", "1");
 
+        log.info(String.format("Opening hive connection (ConnectionString=%s, UID=%s)", hiveConfig.connString, hiveConfig.login));
+
         hiveConnection = DriverManager.getConnection(hiveConfig.connString, properties);
+
+        log.info("Hive connection opened");
     }
 
     /**
@@ -63,15 +71,26 @@ public class ZSVEngine {
                 .concat(")");
 
         // Выполнение запроса
+        log.info("Running hive query:");
+        log.info(query);
+        StopWatch stopWatch = new StopWatch(); stopWatch.start();
+
         Statement stmt = hiveConnection.createStatement();
         ResultSet resultSet = stmt.executeQuery(query);
+
+        stopWatch.stop();
 
         // Разбор результата
         HashMap<String, Long> result = new HashMap<String, Long>();
 
+        int i = 0; // счетчик строк
+
         while (resultSet.next()) {
             result.put(resultSet.getString("bic"), resultSet.getLong("idbank"));
+            i++;
         }
+
+        log.info(String.format("Executed in %s, fetched %d rows", stopWatch, i));
 
         resultSet.close();
         stmt.close();
@@ -92,18 +111,29 @@ public class ZSVEngine {
 
 
         // Выполнение запроса
+        log.info("Running hive query:");
+        log.info(query);
+        StopWatch stopWatch = new StopWatch(); stopWatch.start();
+
         Statement stmt = hiveConnection.createStatement();
         ResultSet resultSet = stmt.executeQuery(query);
+
+        stopWatch.stop();
 
         // Разбор результата
         HashMap<String, Long> result = new HashMap<>();
 
+        int i = 0; // счетчик строк
+
         while (resultSet.next()) {
             result.put(resultSet.getString("inn"), resultSet.getLong("idclient"));
+            i++;
         }
 
         resultSet.close();
         stmt.close();
+
+        log.info(String.format("Executed in %s, fetched %d rows", stopWatch, i));
 
         return result;
     }
@@ -196,10 +226,18 @@ public class ZSVEngine {
             return result;
 
         // Выполнение запроса
+        log.info("Running hive query:");
+        log.info(query);
+        stopWatch.reset(); stopWatch.start();
+
         Statement stmt = hiveConnection.createStatement();
         ResultSet resultSet = stmt.executeQuery(query);
 
+        stopWatch.stop();
+
         // Разбор результата
+        i = 0; // счетчик строк
+
         while (resultSet.next()) {
             HashMap<String, Object> rowMap = new HashMap<>();
             // Заполняем значениями атрибутов
@@ -214,6 +252,8 @@ public class ZSVEngine {
 
         resultSet.close();
         stmt.close();
+
+        log.info(String.format("Executed in %s, fetched %d rows", stopWatch, i));
 
         return result;
     }
@@ -232,11 +272,19 @@ public class ZSVEngine {
                 .concat(" and cast('").concat(stringMaxdate).concat("' as date)");
 
         // Выполнение запроса
+        log.info("Running hive query:");
+        log.info(query);
+        StopWatch stopWatch = new StopWatch(); stopWatch.start();
+
         Statement stmt = hiveConnection.createStatement();
         ResultSet resultSet = stmt.executeQuery(query);
 
+        stopWatch.stop();
+
         // Разбор результата
         HashMap<Long, Map<Date, BigDecimal> > result = new HashMap<>();
+
+        int i = 0; // счетчик строк
 
         while (resultSet.next()) {
             Long idAcc = resultSet.getLong("idaccount");
@@ -248,10 +296,13 @@ public class ZSVEngine {
             }
             // Заполняем значениями атрибутов
             rowMap.put(resultSet.getDate("dt"), resultSet.getBigDecimal("amount"));
+            i++;
         }
 
         resultSet.close();
         stmt.close();
+
+        log.info(String.format("Executed in %s, fetched %d rows", stopWatch, i));
 
         return result;
     }
@@ -259,8 +310,10 @@ public class ZSVEngine {
 
 
     public void closeHiveConnection() throws SQLException {
-        if (hiveConnection != null)
+        if (hiveConnection != null) {
+            log.info("Closing hive connection");
             hiveConnection.close();
+        }
     }
 
 
@@ -323,11 +376,19 @@ public class ZSVEngine {
                 .concat("  and cast ('").concat(stringMaxdate).concat("' as date) ");
 
         // Выполнение запроса
+        log.info("Running hive query:");
+        log.info(query);
+        StopWatch stopWatch = new StopWatch(); stopWatch.start();
+
         Statement stmt = hiveConnection.createStatement();
         ResultSet resultSet = stmt.executeQuery(query);
 
+        stopWatch.stop();
+
         // Объект для итогового результата:
         HashMap<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > result = new HashMap<>();
+
+        int i = 0; // счетчик строк
 
         LinkedList<ZSVResponse.SvBank.Svedenia.Operacii> opers;
 
@@ -409,10 +470,14 @@ public class ZSVEngine {
 
             // Записываем объект класса ZSVResponse.SvBank.Svedenia.Operacii в список opers:
             opers.add(operacii);
+
+            i++;
         }
 
         resultSet.close();
         stmt.close();
+
+        log.info(String.format("Executed in %s, fetched %d rows", stopWatch, i));
 
         return result;
     }

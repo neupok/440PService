@@ -1,5 +1,7 @@
 package ru.binbank.fnsservice;
 
+import org.apache.commons.lang.time.StopWatch;
+import org.apache.log4j.Logger;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
@@ -13,11 +15,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class FnsSrv {
+    private static final Logger log = Logger.getLogger(FnsSrv.class);
 
     /**
      * Точка входа в программу.
      */
     public static void main(String[] args) throws DatatypeConfigurationException {
+        StopWatch stopWatch = new StopWatch(); stopWatch.start();
+
         // Разбор параметров командной строки
         Command command = new Command(args);
         String config = command.getConfigOpt();
@@ -28,6 +33,8 @@ public class FnsSrv {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        log.info("FnsSrv started");
 
         // Чтение входящих сообщений
         ru.binbank.fnsservice.RequestConnector requestConnector = new ru.binbank.fnsservice
@@ -87,6 +94,9 @@ public class FnsSrv {
         // Запись ответов
         ru.binbank.fnsservice.ResponseConnector responseConnector = new ru.binbank.fnsservice.ResponseConnector(configHandler.getOutputDir());
         responseConnector.writeResponses(responses);
+
+        stopWatch.stop();
+        log.info(String.format("Executed in %s", stopWatch));
     }
 
     private static void fillResponseHeader(CITREQUEST response) {
