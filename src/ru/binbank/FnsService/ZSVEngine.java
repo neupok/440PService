@@ -19,6 +19,7 @@ import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
+
 public class ZSVEngine {
     private Connection hiveConnection;
     //private Statement stmt;
@@ -112,11 +113,14 @@ public class ZSVEngine {
     private Collection<String> getOldAccList (Collection<String> accCodes, Map<String, String> accOldNewCodes) {
         LinkedList<String> oldAccCodes = new LinkedList<>();
 
-        if (!accCodes.isEmpty())
+        if (!accCodes.isEmpty()) {
             for (String accCode : accCodes) {
                 // Проверяем, есть ли для данного счёта из запроса соответствующий ему старый счёт Афины:
                 String oldAcc = (String) accOldNewCodes.get(accCode);
+                oldAccCodes.add(oldAcc);
             }
+
+        }
 
         return oldAccCodes;
     }
@@ -155,7 +159,7 @@ public class ZSVEngine {
             String oldAcc = (String) accOldCodes.get(accCode);
 
             // если счёта нет, значит, в ЦФТ он такой же
-            if (oldAcc.isEmpty())
+            if (oldAcc == null)
                 accOldNewCodes.put(accCode, accCode);
                 // иначе - записываем соотвествие старого и нового кодов счета
             else
@@ -172,22 +176,6 @@ public class ZSVEngine {
 
     private Map<String, Map<String, Object> > selectAccounts(Collection<String> accCodes, Collection<Long> idClients, Long idBank) throws SQLException {
         HashMap<String, Map<String, Object> > result = new HashMap<>();
-
-        // Если в запросах есть новые коды счетов (из ЦФТ), то найдём соответствующие им старые коды (из Афины)
-        String queryByNewAcc = null;
-        if (!accCodes.isEmpty())
-            queryByNewAcc = "select codeold from account_history where codenew in ("
-                            .concat(accCodes.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(",")))
-                            .concat(")");
-
-        // Выполнение запроса поиска по новым счетам
-        Statement stmt_newAcc = hiveConnection.createStatement();
-        ResultSet resultSet_newAcc = stmt_newAcc.executeQuery(queryByNewAcc);
-
-        // Если будут найдены старые коды счетов, то добавим их в коллекцию всех счетов
-        while (resultSet_newAcc.next()) {
-            accCodes.add(resultSet_newAcc.getString("codeold"));
-        }
 
         // Формирование текста запроса
         String queryByAccs = null;
@@ -595,7 +583,7 @@ public class ZSVEngine {
                                Map<String, Map<String, Object> > accounts,
                                Map<Long, List<ZSVResponse.SvBank.Svedenia.Operacii> > operacii,
                                Map<Long, Map<Date, BigDecimal> > rests,
-                               Map<String, String> accOldNewCodes), Map<ZSVResponse, ZSVRequest> zsvResponseZSVRequestMap)
+                               Map<String, String> accOldNewCodes, Map<ZSVResponse, ZSVRequest> zsvResponseZSVRequestMap)
     {
         ArrayList<ZSVResponse> responses = new ArrayList<>();
 
@@ -760,6 +748,7 @@ public class ZSVEngine {
                 ++i;
 
                 responses.add(response);
+                zsvResponseZSVRequestMap.put(response, r);
             }
         }
 
