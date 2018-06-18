@@ -1,74 +1,79 @@
-package ru.binbank.fnsservice;
+package ru.ru.binbank.FnsService.adapter;
 
-import org.apache.commons.lang.time.StopWatch;
-import org.apache.log4j.Logger;
-import ru.ru.binbank.FnsService.adapter.AdapterFactory;
-import ru.ru.binbank.FnsService.adapter.FnsAdapter;
+import ru.binbank.fnsservice.utils.ConfigHandler;
+import ru.binbank.fnsservice.RequestConnector;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
-import ru.binbank.fnsservice.utils.Command;
-import ru.binbank.fnsservice.contracts.ZSVResponse;
-import ru.binbank.fnsservice.contracts.ZSVRequest;
 
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import javax.xml.datatype.DatatypeConfigurationException;
-import java.util.*;
+import ru.binbank.fnsservice.utils.ConfigHandler;
 
-public class FnsSrv {
-    private static final Logger log = Logger.getLogger(FnsSrv.class);
+public class FileAdapter extends FnsAdapter implements FnsInterface {
 
-    /**
-     * Точка входа в программу.
-     */
-    public static void main(String[] args) throws DatatypeConfigurationException {
-        StopWatch stopWatch = new StopWatch(); stopWatch.start();
+    private RequestConnector requestConnector;
+    //private ConfigHandler configHandler;
 
-        // Разбор параметров командной строки
-        Command command = new Command(args);
-        String config = command.getConfigOpt();
+    /*
+    // Инициализация основных параметров значениями из config-файла
+    @Override
+    public void setConfig(String configFile) {
 
-        // Разбор параметров из config-файла:
-        ru.binbank.fnsservice.utils.ConfigHandler configHandler = null;
+        configHandler = null;
         try {
-            configHandler = new ru.binbank.fnsservice.utils.ConfigHandler(config);
+            configHandler = new ru.binbank.fnsservice.utils.ConfigHandler(configFile);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        // В зависимости от config-файла определяем адаптер (файл или очередь)
-        AdapterFactory adapterFactory = new AdapterFactory(configHandler);
-        FnsAdapter fnsAdapter = adapterFactory.getAdapter();
+    }
+    */
 
-        log.info("FnsSrv started");
+    // Возвращает коллекцию запросов
+    @Override
+    public Collection<CITREQUEST> getCitRequests(ConfigHandler configHandler) {
 
-        // Возвращаем коллекцию запросов - используем Adapter
-        Collection<CITREQUEST> citrequests = fnsAdapter.getCitRequests(configHandler);
+        // Чтение входящих сообщений
+        ru.binbank.fnsservice.RequestConnector requestConnector = new ru.binbank.fnsservice
+                .RequestConnector(
+                configHandler.getBatchSize(),
+                configHandler.getInputDir(),
+                configHandler.getProcessedDir()
+                );
 
-        // debug
-        //requestConnector.moveToProcessedFolder(requests);
-        //exit(0);
+        // Получение запросов
+        Collection<ru.binbank.fnsservice.contracts.CITREQUEST> citrequests = requestConnector.fetchRequests();
 
-        // Получение ответов
+        return citrequests;
+    }
 
-        LinkedList<CITREQUEST> responses = new LinkedList<>();
+
+
+    /*
+    // Получение ответов
+    @Override
+    public LinkedList<CITREQUEST> getResponses(Collection<CITREQUEST> citrequests) {
+
+        LinkedList<ru.binbank.fnsservice.contracts.CITREQUEST> responses = new LinkedList<>();
 
         ru.binbank.fnsservice.ZSVEngine zsvEngine = new ru.binbank.fnsservice.ZSVEngine(configHandler.getHiveConfig());
-        Collection<ZSVResponse> zsvResponses = null;
+        Collection<ru.binbank.fnsservice.contracts.ZSVResponse> zsvResponses = null;
+
         try {
-            Collection<ZSVRequest> requests = citrequests.stream().map(citrequest -> citrequest.getDATA()
-                                              .getRequest()).collect(Collectors.toList());
+            Collection<ru.binbank.fnsservice.contracts.ZSVRequest> requests = citrequests.stream().map(citrequest -> citrequest.getDATA()
+                    .getRequest()).collect(Collectors.toList());
             // Соответствие ответа и запроса
-            Map<ZSVResponse, ZSVRequest> zsvResponseZSVRequestMap = new HashMap<>();
+            Map<ru.binbank.fnsservice.contracts.ZSVResponse, ru.binbank.fnsservice.contracts.ZSVRequest> zsvResponseZSVRequestMap = new HashMap<>();
             zsvResponses = zsvEngine.getResult(requests, zsvResponseZSVRequestMap);
 
             // Формирование ответов с заголовками
-            for (ZSVResponse zsvResponse: zsvResponses) {
+            for (ru.binbank.fnsservice.contracts.ZSVResponse zsvResponse: zsvResponses) {
                 // Поиск запроса по ответу
-                CITREQUEST citRequest = null;
-                ZSVRequest request = zsvResponseZSVRequestMap.get(zsvResponse);
-                for(CITREQUEST citrequest : citrequests)
+                ru.binbank.fnsservice.contracts.CITREQUEST citRequest = null;
+                ru.binbank.fnsservice.contracts.ZSVRequest request = zsvResponseZSVRequestMap.get(zsvResponse);
+                for(ru.binbank.fnsservice.contracts.CITREQUEST citrequest : citrequests)
                     if (citrequest.getDATA().getRequest() == request)
                     {
                         citRequest = citrequest;
@@ -78,12 +83,12 @@ public class FnsSrv {
                 //
                 zsvResponse.setZapros(citRequest.getSYSTEM().getMSGID().getValue());
 
-                CITREQUEST response = new CITREQUEST();
-                response.setSYSTEM(new CITREQUEST.SYSTEM());
+                ru.binbank.fnsservice.contracts.CITREQUEST response = new ru.binbank.fnsservice.contracts.CITREQUEST();
+                response.setSYSTEM(new ru.binbank.fnsservice.contracts.CITREQUEST.SYSTEM());
 
                 fillResponseHeader(response);
 
-                response.setDATA(new CITREQUEST.DATA());
+                response.setDATA(new ru.binbank.fnsservice.contracts.CITREQUEST.DATA());
                 response.getDATA().setResponse(zsvResponse);
                 responses.add(response);
             }
@@ -95,14 +100,22 @@ public class FnsSrv {
             e.printStackTrace();
         }
 
-        // Запись ответов - используем Adapter
-        fnsAdapter.writeResponses(responses, configHandler);
+        return responses;
 
-        stopWatch.stop();
-        log.info(String.format("Executed in %s", stopWatch));
+    }
+    */
+
+    // Запись ответов
+    @Override
+    //public void writeResponses(Collection<ru.binbank.fnsservice.contracts.CITREQUEST> responses) {
+    public void writeResponses(Collection<CITREQUEST> responses, ConfigHandler configHandler) {
+
+        ru.binbank.fnsservice.ResponseConnector responseConnector = new ru.binbank.fnsservice.ResponseConnector(configHandler.getOutputDir());
+        responseConnector.writeResponses(responses);
+
     }
 
-    // Это ушло в FileAdapter
+    /*
     private static void fillResponseHeader(CITREQUEST response) {
         CITREQUEST.SYSTEM.BPID bpid = new CITREQUEST.SYSTEM.BPID();
         bpid.setValue("TAX_GET_ZSN");
@@ -148,5 +161,5 @@ public class FnsSrv {
         version.setValue("002");
         response.getSYSTEM().setVersion(version);
     }
-
+    */
 }

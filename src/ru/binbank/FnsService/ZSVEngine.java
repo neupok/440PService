@@ -174,15 +174,26 @@ public class ZSVEngine {
                     .concat(accCodes.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(",")))
                     .concat(")");
 
+        log.info("Running hive query:");
+        log.info(queryByNewAcc);
+        StopWatch stopWatch = new StopWatch(); stopWatch.start();
+
         // Выполнение запроса поиска по новым счетам
         Statement stmt_newAcc = hiveConnection.createStatement();
         ResultSet resultSet_newAcc = stmt_newAcc.executeQuery(queryByNewAcc);
+
+        stopWatch.stop();
+
+        int i = 0; // счетчик строк
 
         // Заполняем соответствие "новый код счёта - старый код счёта"
         // только для счетов, имеющих такое соответствие:
         while (resultSet_newAcc.next()) {
             accOldCodes.put(resultSet_newAcc.getString(1), resultSet_newAcc.getString(2));
+            i++;
         }
+
+        log.info(String.format("Executed in %s, fetched %d rows", stopWatch, i));
 
         // Проходим по всем счетам из запросов:
         for (String accCode : accCodes) {
@@ -226,6 +237,7 @@ public class ZSVEngine {
             return result;
 
         // Выполнение запроса
+        StopWatch stopWatch = new StopWatch(); stopWatch.start();
         log.info("Running hive query:");
         log.info(query);
         stopWatch.reset(); stopWatch.start();
@@ -236,7 +248,7 @@ public class ZSVEngine {
         stopWatch.stop();
 
         // Разбор результата
-        i = 0; // счетчик строк
+        int i = 0; // счетчик строк
 
         while (resultSet.next()) {
             HashMap<String, Object> rowMap = new HashMap<>();

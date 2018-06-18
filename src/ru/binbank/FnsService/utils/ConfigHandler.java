@@ -13,10 +13,39 @@ import static jdk.nashorn.internal.runtime.regexp.joni.Config.log;
  *
  */
 public class ConfigHandler {
+
+    /**
+     * Тип config-файла (для файлов или для очередей)
+     */
+    private String configType;
+
+    public String getConfigType() {
+        return configType;
+    }
+
+    public void setConfigType(String configType) {
+        this.configType = configType;
+    }
+
+
     /**
      * Имя конфигурационного файла log4j
      */
     private String log4jFile;
+
+    public void setLog4jFile(String log4jFile) {
+        this.log4jFile = log4jFile;
+    }
+
+    public String getLog4jFile() {
+        return log4jFile;
+    }
+
+
+    /**
+     * Количество обрабатываемых за один раз запросов.
+     */
+    private int batchSize;
 
     public int getBatchSize() {
         return batchSize;
@@ -26,10 +55,11 @@ public class ConfigHandler {
         this.batchSize = batchSize;
     }
 
+
     /**
-     * Количество обрабатываемых за один раз запросов.
+     * Директория со входящими запросами.
      */
-    private int batchSize;
+    private String inputDir;
 
     public String getInputDir() {
         return inputDir;
@@ -39,14 +69,6 @@ public class ConfigHandler {
         this.inputDir = inputDir;
     }
 
-    /**
-     * Директория со входящими запросами.
-     */
-    private String inputDir;
-
-    public HiveConfig getHiveConfig() {
-        return hiveConfig;
-    }
 
     /**
      * Директория для ответов.
@@ -74,6 +96,7 @@ public class ConfigHandler {
         this.processedDir = processedDir;
     }
 
+
     /**
      * Название класса JDBC-драйвера.
      */
@@ -87,10 +110,86 @@ public class ConfigHandler {
         this.jdbcDriverName = jdbcDriverName;
     }
 
+
+    /**
+     * Название хоста для MQ
+     */
+    private String host;
+
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+
+    /**
+     * Номер порта для MQ
+     */
+    private int port;
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+
+    /**
+     * Имя канала для MQ
+     */
+    private String channel;
+
+    public String getChannel() {
+        return channel;
+    }
+
+    public void setChannel(String channel) {
+        this.channel = channel;
+    }
+
+
+    /**
+     * Имя менеджера для MQ
+     */
+    private String queueManagerName;
+
+    public String getQueueManagerName() {
+        return queueManagerName;
+    }
+
+    public void setQueueManagerName(String queueManagerName) {
+        this.queueManagerName = queueManagerName;
+    }
+
+
+    /**
+     * Имя очереди для MQ
+     */
+    private String queueName;
+
+    public String getQueueName() {
+        return queueName;
+    }
+
+    public void setQueueName(String queueName) {
+        this.queueName = queueName;
+    }
+
+
     /**
      * Настройки hive
      */
     private HiveConfig hiveConfig;
+
+    public HiveConfig getHiveConfig() {
+        return hiveConfig;
+    }
+
 
     /**
      * Класс работы с конфигом
@@ -116,10 +215,22 @@ public class ConfigHandler {
         }
 
         // Чтение параметров
-        setBatchSize(Integer.parseInt(xmlConfig.getString("process." + Dictionary.BATCH_SIZE)));
-        setInputDir(xmlConfig.getString("process." + Dictionary.INPUT_DIR));
-        setProcessedDir(xmlConfig.getString("process." + Dictionary.PROCESSED_DIR));
-        setOutputDir(xmlConfig.getString("process." + Dictionary.OUTPUT_DIR));
+        setConfigType(xmlConfig.getString("adapter." + ru.binbank.fnsservice.utils.Dictionary.CONFIG_TYPE));
+
+        if ("file".equals(configType)) {
+            setBatchSize(Integer.parseInt(xmlConfig.getString("process." + ru.binbank.fnsservice.utils.Dictionary.BATCH_SIZE)));
+            setInputDir(xmlConfig.getString("process." + ru.binbank.fnsservice.utils.Dictionary.INPUT_DIR));
+            setProcessedDir(xmlConfig.getString("process." + ru.binbank.fnsservice.utils.Dictionary.PROCESSED_DIR));
+            setOutputDir(xmlConfig.getString("process." + ru.binbank.fnsservice.utils.Dictionary.OUTPUT_DIR));
+        }
+        else if("MQ".equals(configType)) {
+            setHost(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.HOST));
+            setPort(xmlConfig.getInt("queue." + ru.binbank.fnsservice.utils.Dictionary.PORT));
+            setChannel(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.CHANNEL));
+            setQueueManagerName(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.QUEUE_MANAGER_NAME));
+            setQueueName(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.QUEUE_NAME));
+        }
+
 
         // hive
         hiveConfig = new HiveConfig();
@@ -129,13 +240,6 @@ public class ConfigHandler {
         hiveConfig.password = xmlConfig.getString("hive.password");
     }
 
-    public void setLog4jFile(String log4jFile) {
-        this.log4jFile = log4jFile;
-    }
-
-    public String getLog4jFile() {
-        return log4jFile;
-    }
 
     /**
      * Настройки hive
