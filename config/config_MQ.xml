@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<FnsService>
+    <!-- -->
+    <adapter>
+        <config_type>MQ</config_type>
+    </adapter>
+
+    <!-- Настройки обработки -->
+    <queue>
+        <!-- Максимальное количество обрабатываемых за один раз запросов -->
+        <host>msk-wscore1-dev.corp.icba.biz</host>
+        <port>1415</port>
+        <channel>HADOOP.SVRCONN</channel>
+        <queue_manager_name>CORE01.DEV.QM</queue_manager_name>
+        <queue_name>HADOOP.IN</queue_name>
+    </queue>
+
+    <!-- конфигурационный файл log4j -->
+    <log4j>log4j.properties</log4j>
+
+    <hive>
+        <!-- Для Linux -->
+        <!--
+        <driver_name>org.apache.hive.jdbc.HiveDriver</driver_name>
+        -->
+        <!-- Для Windows -->
+        <driver_name>com.cloudera.hive.jdbc4.HS2Driver</driver_name>
+        <connection_string>jdbc:hive2://msk-hadoop01:10000/440_p</connection_string>
+        <login>hadoop</login>
+        <password>HDPwd12345</password>
+    </hive>
+</FnsService>
