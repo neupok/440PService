@@ -1,4 +1,4 @@
-package ru.binbank.FnsService.MQService;
+package ru.binbank.fnsservice.mqservice;
 
 import org.apache.commons.lang.RandomStringUtils;
 import ru.binbank.fnsservice.utils.ConfigHandler;

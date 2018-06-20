@@ -1,4 +1,4 @@
-package ru.binbank.FnsService.MQService;
+package ru.binbank.fnsservice.mqservice;
 
 import ru.binbank.fnsservice.utils.ConfigHandler;
 import com.ibm.mq.jms.*;

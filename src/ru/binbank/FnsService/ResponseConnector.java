@@ -2,10 +2,9 @@ package ru.binbank.fnsservice;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.log4j.Logger;
-import ru.binbank.FnsService.MQService.MQJMSReceiver;
-import ru.binbank.FnsService.MQService.MQJMSSender;
+import ru.binbank.fnsservice.mqservice.MQJMSReceiver;
+import ru.binbank.fnsservice.mqservice.MQJMSSender;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
-import ru.binbank.fnsservice.contracts.ZSVResponse;
 import ru.binbank.fnsservice.utils.ConfigHandler;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
