@@ -2,13 +2,13 @@ package ru.binbank.fnsservice;
 
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
-import ru.binbank.FnsService.adapter.AdapterFactory;
-import ru.binbank.FnsService.adapter.FnsInterface;
+import ru.binbank.fnsservice.adapter.AdapterFactory;
+import ru.binbank.fnsservice.adapter.FnsInterface;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
 import ru.binbank.fnsservice.utils.Command;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
-import ru.ru.binbank.FnsService.adapter.FnsInterface;
+import ru.binbank.fnsservice.adapter.FnsInterface;
 
 import java.sql.SQLException;
 import java.text.ParseException;

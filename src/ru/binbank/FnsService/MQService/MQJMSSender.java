@@ -1,6 +1,5 @@
-package ru.binbank.FnsService.MQService;
+package ru.binbank.fnsservice.mqservice;
 
-import org.apache.commons.lang.RandomStringUtils;
 import ru.binbank.fnsservice.utils.ConfigHandler;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
 import com.ibm.jms.JMSTextMessage;
@@ -9,8 +8,6 @@ import javax.jms.JMSException;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
-import java.io.File;
-import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;

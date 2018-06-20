@@ -1,12 +1,10 @@
-package ru.binbank.FnsService.MQService;
+package ru.binbank.fnsservice.mqservice;
 
 import ru.binbank.fnsservice.utils.ConfigHandler;
 import com.ibm.mq.jms.*;
 import javax.jms.JMSException;
 import javax.jms.Session;
 import javax.xml.bind.JAXBException;
-
-import java.util.Collection;
 
 import static com.ibm.msg.client.wmq.compat.jms.internal.JMSC.MQJMS_TP_CLIENT_MQ_TCPIP;
 

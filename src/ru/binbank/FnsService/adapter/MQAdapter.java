@@ -1,4 +1,4 @@
-package ru.binbank.FnsService.adapter;
+package ru.binbank.fnsservice.adapter;
 
 import java.util.Collection;
 import ru.binbank.fnsservice.contracts.CITREQUEST;

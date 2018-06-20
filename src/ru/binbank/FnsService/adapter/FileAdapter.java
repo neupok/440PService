@@ -1,4 +1,4 @@
-package ru.binbank.FnsService.adapter;
+package ru.binbank.fnsservice.adapter;
 
 import ru.binbank.fnsservice.utils.ConfigHandler;
 import ru.binbank.fnsservice.RequestConnector;

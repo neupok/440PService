@@ -1,23 +1,17 @@
 package ru.binbank.fnsservice;
 
 import org.apache.log4j.Logger;
-import ru.binbank.FnsService.MQService.MQJMSReceiver;
+import ru.binbank.fnsservice.mqservice.MQJMSReceiver;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
-import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.utils.ConfigHandler;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-
-import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 /**
  * Подключение к источнику запросов. *
