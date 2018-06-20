@@ -7,11 +7,7 @@ package ru.binbank.fnsservice.contracts;
 // Generated on: 2018.05.23 at 10:02:59 PM MSK 
 //
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.*;
 
 
 /**

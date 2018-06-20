@@ -1,9 +1,9 @@
 package ru.binbank.fnsservice.mqservice;
 
-import ru.binbank.fnsservice.utils.ConfigHandler;
-import ru.binbank.fnsservice.contracts.CITREQUEST;
 import com.ibm.jms.JMSTextMessage;
 import com.ibm.mq.jms.MQQueueReceiver;
+import ru.binbank.fnsservice.contracts.CITREQUEST;
+
 import javax.jms.JMSException;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -52,10 +52,10 @@ public class MQJMSReceiver extends MQJMSBase {
         return requests;
     }
 
-    public MQJMSReceiver(ConfigHandler configHandler) throws JAXBException {
+    public MQJMSReceiver(int batchSize, String host, int port,
+                         String channel, String queueManagerName, String queueName) {
 
-        super(configHandler);
-
+        super(batchSize, host, port, channel, queueManagerName, queueName);
     }
 
 }

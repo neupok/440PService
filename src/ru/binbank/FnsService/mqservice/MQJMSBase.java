@@ -1,16 +1,17 @@
 package ru.binbank.fnsservice.mqservice;
 
-import ru.binbank.fnsservice.utils.ConfigHandler;
-import com.ibm.mq.jms.*;
+import com.ibm.mq.jms.MQQueue;
+import com.ibm.mq.jms.MQQueueConnection;
+import com.ibm.mq.jms.MQQueueConnectionFactory;
+import com.ibm.mq.jms.MQQueueSession;
+
 import javax.jms.JMSException;
 import javax.jms.Session;
-import javax.xml.bind.JAXBException;
-
-import java.util.Collection;
 
 import static com.ibm.msg.client.wmq.compat.jms.internal.JMSC.MQJMS_TP_CLIENT_MQ_TCPIP;
 
 public abstract class MQJMSBase {
+    private final int batchSize;
     private String host;             //  = "msk-wscore1-dev.corp.icba.biz";
     private int port;                //  = 1415                           ;
     private String channel;          //  = "HADOOP.SVRCONN"               ;
@@ -102,12 +103,13 @@ public abstract class MQJMSBase {
 
     //public abstract Collection<ru.binbank.fnsservice.contracts.CITREQUEST> doAction() throws JAXBException;
 
-    public MQJMSBase(ConfigHandler configHandler) throws JAXBException {
-        this.host = configHandler.getHost();
-        this.port = configHandler.getPort();
-        this.channel = configHandler.getChannel();
-        this.queueManagerName = configHandler.getQueueManagerName();
-        this.queueName = configHandler.getQueueName();
+    public MQJMSBase(int batchSize, String host, int port, String channel, String queueManagerName, String queueName) {
+        this.batchSize = batchSize;
+        this.host = host;
+        this.port = port;
+        this.channel = channel;
+        this.queueManagerName = queueManagerName;
+        this.queueName = queueName;
 
     }
 

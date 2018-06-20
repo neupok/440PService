@@ -1,16 +1,13 @@
 package ru.binbank.fnsservice.mqservice;
 
-import org.apache.commons.lang.RandomStringUtils;
-import ru.binbank.fnsservice.utils.ConfigHandler;
-import ru.binbank.fnsservice.contracts.CITREQUEST;
 import com.ibm.jms.JMSTextMessage;
 import com.ibm.mq.jms.MQQueueSender;
+import ru.binbank.fnsservice.contracts.CITREQUEST;
+
 import javax.jms.JMSException;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
-import java.io.File;
-import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,8 +17,9 @@ public class MQJMSSender extends MQJMSBase {
 
     private MQQueueSender sender = null;
 
-    public MQJMSSender(ConfigHandler configHandler) throws JAXBException {
-        super(configHandler);
+    public MQJMSSender(String host, int port,
+                       String channel, String queueManagerName, String queueName) {
+        super(0, host, port, channel, queueManagerName, queueName);
         try {
             if (sender != null)
                 sender.close();

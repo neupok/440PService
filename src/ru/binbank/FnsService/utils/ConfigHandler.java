@@ -6,8 +6,6 @@ import org.apache.log4j.helpers.Loader;
 
 import java.net.URL;
 
-import static jdk.nashorn.internal.runtime.regexp.joni.Config.log;
-
 /**
  * Класс для работы с файлом конфигурации
  *
@@ -230,7 +228,6 @@ public class ConfigHandler {
             setQueueManagerName(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.QUEUE_MANAGER_NAME));
             setQueueName(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.QUEUE_NAME));
         }
-
 
         // hive
         hiveConfig = new HiveConfig();
