@@ -6,6 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/input" />
       <excludeFolder url="file://$MODULE_DIR$/io" />
+      <excludeFolder url="file://$MODULE_DIR$/logs" />
       <excludeFolder url="file://$MODULE_DIR$/processed" />
     </content>
     <orderEntry type="inheritedJdk" />

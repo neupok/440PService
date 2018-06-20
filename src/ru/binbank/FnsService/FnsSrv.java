@@ -8,6 +8,7 @@ import ru.binbank.fnsservice.contracts.CITREQUEST;
 import ru.binbank.fnsservice.utils.Command;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
+import ru.ru.binbank.FnsService.adapter.FnsInterface;
 
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -39,7 +40,7 @@ public class FnsSrv {
 
         // В зависимости от config-файла определяем адаптер (файл или очередь)
         AdapterFactory adapterFactory = new AdapterFactory(configHandler);
-        FnsAdapter fnsAdapter = adapterFactory.getAdapter();
+        FnsInterface fnsAdapter = adapterFactory.getAdapter();
 
         log.info("FnsSrv started");
 
