@@ -8,6 +8,7 @@
     <!-- Настройки обработки -->
     <queue>
         <!-- Максимальное количество обрабатываемых за один раз запросов -->
+        <batch_size>100</batch_size>
         <host>msk-wscore1-dev.corp.icba.biz</host>
         <port>1415</port>
         <channel>HADOOP.SVRCONN</channel>

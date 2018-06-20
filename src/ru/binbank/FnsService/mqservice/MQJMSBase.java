@@ -11,7 +11,7 @@ import javax.jms.Session;
 import static com.ibm.msg.client.wmq.compat.jms.internal.JMSC.MQJMS_TP_CLIENT_MQ_TCPIP;
 
 public abstract class MQJMSBase {
-    private final int batchSize;
+    //private final int batchSize;
     private String host;             //  = "msk-wscore1-dev.corp.icba.biz";
     private int port;                //  = 1415                           ;
     private String channel;          //  = "HADOOP.SVRCONN"               ;
@@ -101,10 +101,7 @@ public abstract class MQJMSBase {
         return;
     }
 
-    //public abstract Collection<ru.binbank.fnsservice.contracts.CITREQUEST> doAction() throws JAXBException;
-
-    public MQJMSBase(int batchSize, String host, int port, String channel, String queueManagerName, String queueName) {
-        this.batchSize = batchSize;
+    public MQJMSBase(String host, int port, String channel, String queueManagerName, String queueName) {
         this.host = host;
         this.port = port;
         this.channel = channel;

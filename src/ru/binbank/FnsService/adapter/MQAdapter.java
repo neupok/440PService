@@ -36,7 +36,7 @@ public class MQAdapter implements FnsInterface {
         // Получение запросов
         Collection<CITREQUEST> requests = null;
         try {
-            requests = MQReceiver.doAction();
+            requests = MQReceiver.doReceive();
         } catch (JAXBException e) {
             e.printStackTrace();
         }
@@ -51,7 +51,7 @@ public class MQAdapter implements FnsInterface {
                                                channel, queueManagerName, queueName);
         MQSender.createConnection();
 
-        MQSender.doAction(responses);
+        MQSender.doSend(responses);
 
         MQSender.closeConnection();
     }

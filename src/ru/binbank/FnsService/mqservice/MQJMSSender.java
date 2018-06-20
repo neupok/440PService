@@ -19,7 +19,7 @@ public class MQJMSSender extends MQJMSBase {
 
     public MQJMSSender(String host, int port,
                        String channel, String queueManagerName, String queueName) {
-        super(0, host, port, channel, queueManagerName, queueName);
+        super(host, port, channel, queueManagerName, queueName);
         try {
             if (sender != null)
                 sender.close();
@@ -28,7 +28,7 @@ public class MQJMSSender extends MQJMSBase {
         }
     }
 
-    public void doAction(Collection<CITREQUEST> responses) throws JAXBException {
+    public void doSend(Collection<CITREQUEST> responses) throws JAXBException {
         ArrayList<CITREQUEST> requests = new ArrayList<>();
 
         try {

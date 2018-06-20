@@ -222,6 +222,7 @@ public class ConfigHandler {
             setOutputDir(xmlConfig.getString("process." + ru.binbank.fnsservice.utils.Dictionary.OUTPUT_DIR));
         }
         else if("MQ".equals(configType)) {
+            setBatchSize(Integer.parseInt(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.BATCH_SIZE)));
             setHost(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.HOST));
             setPort(xmlConfig.getInt("queue." + ru.binbank.fnsservice.utils.Dictionary.PORT));
             setChannel(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.CHANNEL));
