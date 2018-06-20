@@ -2,8 +2,8 @@ package ru.binbank.fnsservice;
 
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
-import ru.ru.binbank.FnsService.adapter.AdapterFactory;
-import ru.ru.binbank.FnsService.adapter.FnsAdapter;
+import ru.binbank.FnsService.adapter.AdapterFactory;
+import ru.binbank.FnsService.adapter.FnsInterface;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
 import ru.binbank.fnsservice.utils.Command;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.stream.Collectors;
 
+import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeConfigurationException;
 import java.util.*;
 
@@ -23,7 +24,7 @@ public class FnsSrv {
     /**
      * Точка входа в программу.
      */
-    public static void main(String[] args) throws DatatypeConfigurationException {
+    public static void main(String[] args) throws DatatypeConfigurationException, JAXBException {
         StopWatch stopWatch = new StopWatch(); stopWatch.start();
 
         // Разбор параметров командной строки
@@ -103,7 +104,7 @@ public class FnsSrv {
         log.info(String.format("Executed in %s", stopWatch));
     }
 
-    // Это ушло в FileAdapter
+
     private static void fillResponseHeader(CITREQUEST response) {
         CITREQUEST.SYSTEM.BPID bpid = new CITREQUEST.SYSTEM.BPID();
         bpid.setValue("TAX_GET_ZSN");

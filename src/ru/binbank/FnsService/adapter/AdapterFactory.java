@@ -1,8 +1,7 @@
-package ru.ru.binbank.FnsService.adapter;
-
+package ru.binbank.fnsservice.adapter;
 
 // Фабрика должна получить на вход все параметры, необходимые для инициализации объекта,
-// а вернуть инициализированный объект
+// и вернуть инициализированный объект
 public class AdapterFactory {
     private String adapterType;
 
@@ -12,7 +11,7 @@ public class AdapterFactory {
 
     public FnsInterface getAdapter() {
 
-        FnsAdapter fnsAdapter = null;
+        FnsInterface fnsAdapter = null;
 
         if( "file".equals(adapterType) ) {
             // если на вход подали config для работы с файлами
