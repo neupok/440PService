@@ -1,17 +1,16 @@
 package ru.binbank.fnsservice.adapter;
 
-import java.util.Collection;
-import ru.binbank.fnsservice.utils.ConfigHandler;
+import ru.binbank.fnsservice.contracts.CITREQUEST;
 
 import javax.xml.bind.JAXBException;
+import java.util.Collection;
 
 
 public interface FnsInterface {
 
     // Возвращает коллекцию запросов
-    Collection<ru.binbank.fnsservice.contracts.CITREQUEST> getCitRequests(ConfigHandler configHandler);
+    Collection<CITREQUEST> getCitRequests();
 
     // Запись ответов
-    void writeResponses(Collection<ru.binbank.fnsservice.contracts.CITREQUEST> responses, ConfigHandler configHandler) throws JAXBException;
-
+    void writeResponses(Collection<CITREQUEST> responses) throws JAXBException;
 }

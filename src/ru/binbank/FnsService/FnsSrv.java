@@ -5,18 +5,16 @@ import org.apache.log4j.Logger;
 import ru.binbank.fnsservice.adapter.AdapterFactory;
 import ru.binbank.fnsservice.adapter.FnsInterface;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
-import ru.binbank.fnsservice.utils.Command;
-import ru.binbank.fnsservice.contracts.ZSVResponse;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
-import ru.binbank.fnsservice.adapter.FnsInterface;
-
-import java.sql.SQLException;
-import java.text.ParseException;
-import java.util.stream.Collectors;
+import ru.binbank.fnsservice.contracts.ZSVResponse;
+import ru.binbank.fnsservice.utils.Command;
 
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeConfigurationException;
+import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class FnsSrv {
     private static final Logger log = Logger.getLogger(FnsSrv.class);
@@ -40,13 +38,12 @@ public class FnsSrv {
         }
 
         // В зависимости от config-файла определяем адаптер (файл или очередь)
-        AdapterFactory adapterFactory = new AdapterFactory(configHandler);
-        FnsInterface fnsAdapter = adapterFactory.getAdapter();
+        FnsInterface fnsAdapter = AdapterFactory.getAdapter(configHandler);
 
         log.info("FnsSrv started");
 
         // Возвращаем коллекцию запросов - используем Adapter
-        Collection<CITREQUEST> citrequests = fnsAdapter.getCitRequests(configHandler);
+        Collection<CITREQUEST> citrequests = fnsAdapter.getCitRequests();
 
         // debug
         //requestConnector.moveToProcessedFolder(requests);
@@ -98,7 +95,7 @@ public class FnsSrv {
         }
 
         // Запись ответов - используем Adapter
-        fnsAdapter.writeResponses(responses, configHandler);
+        fnsAdapter.writeResponses(responses);
 
         stopWatch.stop();
         log.info(String.format("Executed in %s", stopWatch));

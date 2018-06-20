@@ -40,5 +40,7 @@
       </library>
     </orderEntry>
     <orderEntry type="library" name="log4j-1.2.16" level="project" />
+    <orderEntry type="library" name="com.ibm.mq.allclient-9.0.5.0" level="project" />
+    <orderEntry type="library" name="javax.jms-api-2.0.1" level="project" />
   </component>
 </module>

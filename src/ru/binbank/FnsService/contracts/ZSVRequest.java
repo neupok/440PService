@@ -1,6 +1,10 @@
 package ru.binbank.fnsservice.contracts;
 
-import java.util.Date;
+import javax.xml.bind.annotation.*;
+import javax.xml.datatype.XMLGregorianCalendar;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Запрос выписки.
@@ -11,17 +15,6 @@ import java.util.Date;
 // Any modifications to this file will be lost upon recompilation of the source schema.
 // Generated on: 2018.05.23 at 10:02:59 PM MSK
 //
-
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
-import javax.xml.datatype.XMLGregorianCalendar;
 
 
 /**

@@ -1,37 +1,58 @@
 package ru.binbank.fnsservice.adapter;
 
-import java.util.Collection;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
-import ru.binbank.fnsservice.utils.ConfigHandler;
-import ru.binbank.fnsservice.RequestConnector;
-import ru.binbank.fnsservice.ResponseConnector;
+import ru.binbank.fnsservice.mqservice.MQJMSReceiver;
+import ru.binbank.fnsservice.mqservice.MQJMSSender;
 
 import javax.xml.bind.JAXBException;
+import java.util.Collection;
 
 
 public class MQAdapter implements FnsInterface {
 
-    // Возвращает коллекцию запросов
-    @Override
-    public Collection<CITREQUEST> getCitRequests(ConfigHandler configHandler) {
+    private final int batchSize;
+    private final String host;
+    private final int port;
+    private final String channel;
+    private final String queueManagerName;
+    private final String queueName;
 
-        // Чтение входящих сообщений
-        RequestConnector requestConnector = new ru.binbank.fnsservice.RequestConnector(configHandler);
 
-        // Получение запросов
-        Collection<CITREQUEST> citrequests = requestConnector.fetchRequests(configHandler);
-
-        return citrequests;
-
+    public MQAdapter(int batchSize, String host, int port, String channel, String queueManagerName, String queueName) {
+        this.batchSize = batchSize;
+        this.host = host;
+        this.port = port;
+        this.channel = channel;
+        this.queueManagerName = queueManagerName;
+        this.queueName = queueName;
     }
 
+    // Возвращает коллекцию запросов
+    public Collection<CITREQUEST> getCitRequests() {
+        MQJMSReceiver MQReceiver = new MQJMSReceiver(batchSize, host, port,
+                                                     channel, queueManagerName, queueName);
+        MQReceiver.createConnection();
+
+        // Получение запросов
+        Collection<CITREQUEST> requests = null;
+        try {
+            requests = MQReceiver.doAction();
+        } catch (JAXBException e) {
+            e.printStackTrace();
+        }
+
+        MQReceiver.closeConnection();
+        return requests;
+    }
 
     // Запись ответов
-    @Override
-    public void writeResponses(Collection<CITREQUEST> responses, ConfigHandler configHandler) throws JAXBException {
+    public void writeResponses(Collection<CITREQUEST> responses) throws JAXBException {
+        MQJMSSender MQSender = new MQJMSSender(host, port,
+                                               channel, queueManagerName, queueName);
+        MQSender.createConnection();
 
-        ResponseConnector responseConnector = new ru.binbank.fnsservice.ResponseConnector(configHandler);
-        responseConnector.writeResponses(responses, configHandler);
+        MQSender.doAction(responses);
 
+        MQSender.closeConnection();
     }
 }
