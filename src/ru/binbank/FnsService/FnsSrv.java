@@ -1,5 +1,6 @@
 package ru.binbank.fnsservice;
 
+import com.ibm.jms.JMSTextMessage;
 import org.apache.commons.lang.time.StopWatch;
 import org.apache.log4j.Logger;
 import ru.binbank.fnsservice.adapter.AdapterFactory;
@@ -7,16 +8,22 @@ import ru.binbank.fnsservice.adapter.FnsInterface;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
 import ru.binbank.fnsservice.contracts.ZSVRequest;
 import ru.binbank.fnsservice.contracts.ZSVResponse;
+import ru.binbank.fnsservice.mqservice.MQJMSSender;
 import ru.binbank.fnsservice.utils.Command;
 
+import javax.jms.Message;
 import javax.xml.bind.JAXBException;
 import javax.xml.datatype.DatatypeConfigurationException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.instrument.Instrumentation;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class FnsSrv {
+
     private static final Logger log = Logger.getLogger(FnsSrv.class);
 
     /**
@@ -52,7 +59,6 @@ public class FnsSrv {
         // Получение ответов
 
         LinkedList<CITREQUEST> responses = new LinkedList<>();
-
         ru.binbank.fnsservice.ZSVEngine zsvEngine = new ru.binbank.fnsservice.ZSVEngine(configHandler.getHiveConfig());
         Collection<ZSVResponse> zsvResponses = null;
         try {

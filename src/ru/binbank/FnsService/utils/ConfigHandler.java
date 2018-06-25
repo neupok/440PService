@@ -166,16 +166,30 @@ public class ConfigHandler {
 
 
     /**
-     * Имя очереди для MQ
+     * Имя входящей очереди для MQ
      */
-    private String queueName;
+    private String queueNameIn;
 
-    public String getQueueName() {
-        return queueName;
+    public String getQueueNameIn() {
+        return queueNameIn;
     }
 
-    public void setQueueName(String queueName) {
-        this.queueName = queueName;
+    public void setQueueNameIn(String queueNameIn) {
+        this.queueNameIn = queueNameIn;
+    }
+
+
+    /**
+     * Имя исходящей очереди для MQ
+     */
+    private String queueNameOut;
+
+    public String getQueueNameOut() {
+        return queueNameOut;
+    }
+
+    public void setQueueNameOut(String queueNameOut) {
+        this.queueNameOut = queueNameOut;
     }
 
 
@@ -227,7 +241,8 @@ public class ConfigHandler {
             setPort(xmlConfig.getInt("queue." + ru.binbank.fnsservice.utils.Dictionary.PORT));
             setChannel(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.CHANNEL));
             setQueueManagerName(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.QUEUE_MANAGER_NAME));
-            setQueueName(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.QUEUE_NAME));
+            setQueueNameIn(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.QUEUE_NAME_IN));
+            setQueueNameOut(xmlConfig.getString("queue." + ru.binbank.fnsservice.utils.Dictionary.QUEUE_NAME_OUT));
         }
 
         // hive

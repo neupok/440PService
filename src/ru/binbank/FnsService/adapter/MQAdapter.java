@@ -15,22 +15,25 @@ public class MQAdapter implements FnsInterface {
     private final int port;
     private final String channel;
     private final String queueManagerName;
-    private final String queueName;
+    private final String queueNameIn;
+    private final String queueNameOut;
 
 
-    public MQAdapter(int batchSize, String host, int port, String channel, String queueManagerName, String queueName) {
+    public MQAdapter(int batchSize, String host, int port, String channel, String queueManagerName,
+                     String queueNameIn, String queueNameOut) {
         this.batchSize = batchSize;
         this.host = host;
         this.port = port;
         this.channel = channel;
         this.queueManagerName = queueManagerName;
-        this.queueName = queueName;
+        this.queueNameIn = queueNameIn;
+        this.queueNameOut = queueNameOut;
     }
 
     // Возвращает коллекцию запросов
     public Collection<CITREQUEST> getCitRequests() {
         MQJMSReceiver MQReceiver = new MQJMSReceiver(batchSize, host, port,
-                                                     channel, queueManagerName, queueName);
+                                                     channel, queueManagerName, queueNameIn);
         MQReceiver.createConnection();
 
         // Получение запросов
@@ -48,7 +51,7 @@ public class MQAdapter implements FnsInterface {
     // Запись ответов
     public void writeResponses(Collection<CITREQUEST> responses) throws JAXBException {
         MQJMSSender MQSender = new MQJMSSender(host, port,
-                                               channel, queueManagerName, queueName);
+                                               channel, queueManagerName, queueNameOut);
         MQSender.createConnection();
 
         MQSender.doSend(responses);

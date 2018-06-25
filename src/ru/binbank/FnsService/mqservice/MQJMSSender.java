@@ -3,12 +3,16 @@ package ru.binbank.fnsservice.mqservice;
 import com.ibm.jms.JMSTextMessage;
 import com.ibm.mq.jms.MQQueueSender;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
+import ru.binbank.fnsservice.mqservice.MQJMSBase;
 
 import javax.jms.JMSException;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.instrument.Instrumentation;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -17,9 +21,10 @@ public class MQJMSSender extends MQJMSBase {
 
     private MQQueueSender sender = null;
 
+
     public MQJMSSender(String host, int port,
-                       String channel, String queueManagerName, String queueName) {
-        super(host, port, channel, queueManagerName, queueName);
+                       String channel, String queueManagerName, String queueNameOut) {
+        super(host, port, channel, queueManagerName, queueNameOut);
         try {
             if (sender != null)
                 sender.close();
@@ -27,6 +32,7 @@ public class MQJMSSender extends MQJMSBase {
             recordFailure(jmse);
         }
     }
+
 
     public void doSend(Collection<CITREQUEST> responses) throws JAXBException {
         ArrayList<CITREQUEST> requests = new ArrayList<>();

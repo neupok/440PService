@@ -3,6 +3,7 @@ package ru.binbank.fnsservice.mqservice;
 import com.ibm.jms.JMSTextMessage;
 import com.ibm.mq.jms.MQQueueReceiver;
 import ru.binbank.fnsservice.contracts.CITREQUEST;
+import ru.binbank.fnsservice.mqservice.MQJMSBase;
 
 import javax.jms.JMSException;
 import javax.xml.bind.JAXBContext;
@@ -13,10 +14,20 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 
-public class MQJMSReceiver extends ru.binbank.fnsservice.mqservice.MQJMSBase {
+public class MQJMSReceiver extends MQJMSBase {
     private final int batchSize;
     private final int timeout  = 3000;
     private MQQueueReceiver receiver = null;
+
+
+    public MQJMSReceiver(int batchSize, String host, int port,
+                         String channel, String queueManagerName, String queueNameIn) {
+
+        super(host, port, channel, queueManagerName, queueNameIn);
+
+        this.batchSize = batchSize;
+    }
+
 
     public Collection<CITREQUEST> doReceive() throws JAXBException {
 
@@ -56,14 +67,6 @@ public class MQJMSReceiver extends ru.binbank.fnsservice.mqservice.MQJMSBase {
         }
 
         return requests;
-    }
-
-    public MQJMSReceiver(int batchSize, String host, int port,
-                         String channel, String queueManagerName, String queueName) {
-
-        super(host, port, channel, queueManagerName, queueName);
-
-        this.batchSize = batchSize;
     }
 
 }

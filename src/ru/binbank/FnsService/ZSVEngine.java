@@ -167,46 +167,48 @@ public class ZSVEngine {
 
         // Если в запросах есть новые коды счетов (из ЦФТ), то найдём соответствующие им старые коды (из Афины)
         String queryByNewAcc = null;
-        if (!accCodes.isEmpty())
+        if (!accCodes.isEmpty()) {
             queryByNewAcc = "select codenew, codeold from account_history where codenew in ("
                     .concat(accCodes.stream().map(s1 -> "'" + s1 + "'").collect(Collectors.joining(",")))
                     .concat(")");
 
-        log.info("Running hive query:");
-        log.info(queryByNewAcc);
-        StopWatch stopWatch = new StopWatch(); stopWatch.start();
+            log.info("Running hive query:");
+            log.info(queryByNewAcc);
+            StopWatch stopWatch = new StopWatch(); stopWatch.start();
 
-        // Выполнение запроса поиска по новым счетам
-        Statement stmt_newAcc = hiveConnection.createStatement();
-        ResultSet resultSet_newAcc = stmt_newAcc.executeQuery(queryByNewAcc);
+            // Выполнение запроса поиска по новым счетам
+            Statement stmt_newAcc = hiveConnection.createStatement();
+            ResultSet resultSet_newAcc = stmt_newAcc.executeQuery(queryByNewAcc);
 
-        stopWatch.stop();
+            stopWatch.stop();
 
-        int i = 0; // счетчик строк
+            int i = 0; // счетчик строк
 
-        // Заполняем соответствие "новый код счёта - старый код счёта"
-        // только для счетов, имеющих такое соответствие:
-        while (resultSet_newAcc.next()) {
-            accOldCodes.put(resultSet_newAcc.getString(1), resultSet_newAcc.getString(2));
-            i++;
+            // Заполняем соответствие "новый код счёта - старый код счёта"
+            // только для счетов, имеющих такое соответствие:
+            while (resultSet_newAcc.next()) {
+                accOldCodes.put(resultSet_newAcc.getString(1), resultSet_newAcc.getString(2));
+                i++;
+            }
+
+            log.info(String.format("Executed in %s, fetched %d rows", stopWatch, i));
+
+            // Проходим по всем счетам из запросов:
+            for (String accCode : accCodes) {
+                String oldAcc = (String) accOldCodes.get(accCode);
+
+                // если счёта нет, значит, в ЦФТ он такой же
+                if (oldAcc == null)
+                    accOldNewCodes.put(accCode, accCode);
+                    // иначе - записываем соотвествие старого и нового кодов счета
+                else
+                    accOldNewCodes.put(accCode, oldAcc);
+            }
+
+            resultSet_newAcc.close();
+            stmt_newAcc.close();
+
         }
-
-        log.info(String.format("Executed in %s, fetched %d rows", stopWatch, i));
-
-        // Проходим по всем счетам из запросов:
-        for (String accCode : accCodes) {
-            String oldAcc = (String) accOldCodes.get(accCode);
-
-            // если счёта нет, значит, в ЦФТ он такой же
-            if (oldAcc == null)
-                accOldNewCodes.put(accCode, accCode);
-                // иначе - записываем соотвествие старого и нового кодов счета
-            else
-                accOldNewCodes.put(accCode, oldAcc);
-        }
-
-        resultSet_newAcc.close();
-        stmt_newAcc.close();
 
         return accOldNewCodes;
 

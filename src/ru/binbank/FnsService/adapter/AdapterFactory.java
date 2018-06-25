@@ -25,7 +25,9 @@ public class AdapterFactory {
                                        configHandler.getPort(),
                                        configHandler.getChannel(),
                                        configHandler.getQueueManagerName(),
-                                       configHandler.getQueueName());
+                                       configHandler.getQueueNameIn(),
+                                       configHandler.getQueueNameOut()
+                                     );
         }
 
         return (FnsInterface) fnsAdapter;

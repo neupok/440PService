@@ -19,6 +19,7 @@ public class Dictionary {
     public static final String PORT = "port";
     public static final String CHANNEL = "channel";
     public static final String QUEUE_MANAGER_NAME = "queue_manager_name";
-    public static final String QUEUE_NAME = "queue_name";
+    public static final String QUEUE_NAME_IN = "queue_name_in";
+    public static final String QUEUE_NAME_OUT = "queue_name_out";
 
 }

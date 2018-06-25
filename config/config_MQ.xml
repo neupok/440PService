@@ -13,7 +13,8 @@
         <port>1415</port>
         <channel>HADOOP.SVRCONN</channel>
         <queue_manager_name>CORE01.DEV.QM</queue_manager_name>
-        <queue_name>HADOOP.IN</queue_name>
+        <queue_name_in>HADOOP.IN</queue_name_in>
+        <queue_name_out>HADOOP.OUT</queue_name_out>
     </queue>
 
     <!-- конфигурационный файл log4j -->
